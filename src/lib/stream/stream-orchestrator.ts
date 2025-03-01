@@ -1,6 +1,8 @@
 import { StreamManager, createStream } from './stream-manager'
-import type { StreamConfig } from './stream-manager'
-import { supabaseAdmin as supabase } from '@/lib/db/client'
+import type { StreamConfig, StreamManagerDependencies } from './stream-manager'
+import type { DatabaseConfig, TranscriptionConfig } from '../config/types'
+import { createSupabaseClient } from '@/lib/db/client'
+import { createTranscriptionService } from '@/lib/transcribe/gemini'
 import path from 'path'
 
 /**
@@ -21,6 +23,27 @@ export interface OrchestratorConfig {
      * Default number of segments to keep per station
      */
     defaultKeepSegments?: number
+
+    /**
+     * Database configuration
+     */
+    database?: DatabaseConfig
+
+    /**
+     * Transcription configuration
+     */
+    transcription?: TranscriptionConfig
+}
+
+/**
+ * Internal config type with required fields
+ */
+interface InternalOrchestratorConfig {
+    baseSegmentDir: string
+    defaultSegmentLength: number
+    defaultKeepSegments: number
+    database?: DatabaseConfig
+    transcription?: TranscriptionConfig
 }
 
 /**
@@ -28,13 +51,32 @@ export interface OrchestratorConfig {
  */
 export class StreamOrchestrator {
     private activeStreams: Map<string, StreamManager> = new Map()
-    private config: Required<OrchestratorConfig>
+    private config: InternalOrchestratorConfig
+    private dependencies: StreamManagerDependencies
 
     constructor(config: OrchestratorConfig) {
         this.config = {
             baseSegmentDir: config.baseSegmentDir,
             defaultSegmentLength: config.defaultSegmentLength || 15,
             defaultKeepSegments: config.defaultKeepSegments || 5,
+            database: config.database,
+            transcription: config.transcription,
+        }
+
+        // Initialize dependencies
+        this.dependencies = {}
+
+        // If database config is provided, create a Supabase client
+        if (config.database) {
+            this.dependencies.dbClient = createSupabaseClient(config.database)
+        }
+
+        // If transcription config is provided and enabled, create a transcription service
+        if (config.transcription && config.transcription.enabled !== false) {
+            const transcriptionService = createTranscriptionService(
+                config.transcription,
+            )
+            this.dependencies.transcriptionService = transcriptionService
         }
     }
 
@@ -71,7 +113,11 @@ export class StreamOrchestrator {
         console.log(`[Orchestrator] Starting stream for station ${stationId}`)
 
         // Create and start the stream
-        const streamManager = await createStream(streamUrl, streamConfig)
+        const streamManager = await createStream(
+            streamUrl,
+            streamConfig,
+            this.dependencies,
+        )
 
         // Store the active stream
         this.activeStreams.set(stationId, streamManager)
@@ -150,14 +196,45 @@ export class StreamOrchestrator {
      */
     async startMultipleStations(
         stationIds: string[],
+        stationData?: Array<{ id: string; streamUrl: string }>,
     ): Promise<Map<string, StreamManager>> {
         const result = new Map<string, StreamManager>()
 
-        // Fetch station data from the database
-        const { data: stations, error } = await supabase
+        // If station data is provided, use it
+        if (stationData && stationData.length > 0) {
+            console.log(
+                `[Orchestrator] Starting streams for ${stationData.length} provided stations`,
+            )
+
+            for (const station of stationData) {
+                try {
+                    const streamManager = await this.startStation(
+                        station.id,
+                        station.streamUrl,
+                    )
+                    result.set(station.id, streamManager)
+                } catch (error) {
+                    console.error(
+                        `[Orchestrator] Failed to start stream for station ${station.id}:`,
+                        error,
+                    )
+                }
+            }
+
+            return result
+        }
+
+        // Otherwise, try to fetch station data from the database if we have a database client
+        if (!this.dependencies.dbClient) {
+            throw new Error(
+                'No database client available and no station data provided',
+            )
+        }
+
+        const { data: stations, error } = await this.dependencies.dbClient
             .from('stations')
             .select('id, stationId, stationName, streamUrl')
-            .in('id', stationIds)
+            .in('stationId', stationIds)
             .eq('isOnline', true)
 
         if (error) {
@@ -196,8 +273,8 @@ export class StreamOrchestrator {
 /**
  * Create and initialize a stream orchestrator with the given configuration
  */
-export async function createOrchestrator(
+export function createOrchestrator(
     config: OrchestratorConfig,
-): Promise<StreamOrchestrator> {
+): StreamOrchestrator {
     return new StreamOrchestrator(config)
 }

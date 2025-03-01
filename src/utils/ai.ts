@@ -1,9 +1,16 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import type { TranscriptionConfig } from '@/lib/config/types'
 
-const { GOOGLE_API_KEY } = process.env
+/**
+ * Create a Google Generative AI client
+ *
+ * @param config Transcription configuration
+ * @returns Google Generative AI client
+ */
+export function createGenerativeAIClient(config: TranscriptionConfig) {
+    if (!config.googleApiKey) {
+        throw new Error('Google API key is required for transcription')
+    }
 
-if (!GOOGLE_API_KEY) {
-    throw new Error('GOOGLE_API_KEY is not set')
+    return new GoogleGenerativeAI(config.googleApiKey)
 }
-
-export const googleGenerativeAI = new GoogleGenerativeAI(GOOGLE_API_KEY)

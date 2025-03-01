@@ -10,6 +10,7 @@ export default [
             '**/dist/**',
             '**/build/**',
             '**/test/**',
+            '**/examples/**',
         ],
         files: ['**/*.{ts,tsx,js,jsx}'],
         plugins: {

@@ -2,8 +2,7 @@ import { $, ShellPromise } from 'bun'
 import path from 'path'
 import { readdir, stat, mkdir, unlink } from 'fs/promises'
 import { watch } from 'fs'
-import { transcribeAudio } from '@/lib/transcribe/gemini'
-import { supabaseAdmin } from '@/lib/db/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Information about a completed segment
@@ -29,6 +28,33 @@ export interface StreamConfig {
 }
 
 /**
+ * Transcription result from the AI service
+ */
+export interface TranscriptionResult {
+    timecode: string
+    caption: string
+}
+
+/**
+ * Dependencies for the stream manager
+ */
+export interface StreamManagerDependencies {
+    /**
+     * Supabase client for database operations
+     */
+    dbClient?: SupabaseClient
+
+    /**
+     * Transcription service for audio transcription
+     */
+    transcriptionService?: {
+        transcribeAudio: (
+            audioFilePath: string,
+        ) => Promise<TranscriptionResult[]>
+    }
+}
+
+/**
  * Manages a stream of audio segments
  */
 export class StreamManager {
@@ -37,15 +63,18 @@ export class StreamManager {
     private watcher: ReturnType<typeof watch> | null = null
     private existingSegments: Set<string> = new Set()
     private readonly stationId: string
+    private readonly dependencies: StreamManagerDependencies
 
     constructor(
         private readonly streamUrl: string,
         private readonly config: StreamConfig,
+        dependencies: StreamManagerDependencies = {},
     ) {
         this.config.segmentLength = this.config.segmentLength || 10
         this.config.segmentPrefix = this.config.segmentPrefix || 'segment'
         this.config.keepSegments = this.config.keepSegments || 0
         this.stationId = config.stationId
+        this.dependencies = dependencies
     }
 
     private async deleteOldSegments() {
@@ -307,77 +336,47 @@ export class StreamManager {
 
     private async processSegment(segmentInfo: SegmentInfo): Promise<void> {
         try {
-            console.log(
-                `[Segment ${segmentInfo.segmentNumber}] Starting processing`,
-            )
-
-            // Read the audio file and convert to base64
-            const audioData = Buffer.from(
-                await Bun.file(segmentInfo.filePath).arrayBuffer(),
-            ).toString('base64')
-
-            // Create database entry with pending status
-            const { data: transcription, error: insertError } =
-                await supabaseAdmin
-                    .from('transcriptions')
-                    .insert({
-                        station_id: this.stationId,
-                        audio_data: audioData,
-                        start_time: new Date(
-                            segmentInfo.endTime.getTime() -
-                                segmentInfo.duration * 1000,
-                        ),
-                        end_time: segmentInfo.endTime,
-                        status: 'processing',
-                    })
-                    .select()
-                    .single()
-
-            if (insertError) throw insertError
-
-            // Transcribe the audio
-            try {
-                const transcriptionResult = await transcribeAudio(
-                    segmentInfo.filePath,
-                )
-
-                // Update the database entry with transcription and completed status
-                const { error: updateError } = await supabaseAdmin
-                    .from('transcriptions')
-                    .update({
-                        transcription: transcriptionResult,
-                        status: 'completed',
-                    })
-                    .eq('id', transcription.id)
-
-                if (updateError) throw updateError
-
+            // If transcription service is provided, transcribe the segment
+            if (this.dependencies.transcriptionService) {
                 console.log(
-                    `[Segment ${segmentInfo.segmentNumber}] Processing completed successfully`,
+                    `[Processing] Transcribing segment ${path.basename(segmentInfo.filePath)}`,
                 )
-            } catch (transcriptionError: unknown) {
-                // Update the database entry with error status
-                const { error: updateError } = await supabaseAdmin
-                    .from('transcriptions')
-                    .update({
-                        status: 'failed',
-                        error_message:
-                            transcriptionError instanceof Error
-                                ? transcriptionError.message
-                                : String(transcriptionError),
-                    })
-                    .eq('id', transcription.id)
+                const transcription =
+                    await this.dependencies.transcriptionService.transcribeAudio(
+                        segmentInfo.filePath,
+                    )
 
-                if (updateError) throw updateError
+                // If dbClient is provided, save transcription to the database
+                if (this.dependencies.dbClient && transcription.length > 0) {
+                    console.log(
+                        `[Processing] Saving transcription to database for segment ${path.basename(segmentInfo.filePath)}`,
+                    )
+                    const { error } = await this.dependencies.dbClient
+                        .from('segment_transcriptions')
+                        .insert({
+                            stationId: this.stationId,
+                            segmentPath: segmentInfo.filePath,
+                            segmentNumber: segmentInfo.segmentNumber,
+                            duration: segmentInfo.duration,
+                            endTime: segmentInfo.endTime.toISOString(),
+                            transcription,
+                        })
 
-                throw transcriptionError
+                    if (error) {
+                        console.error(
+                            `[Processing] Error saving transcription:`,
+                            error,
+                        )
+                    }
+                }
             }
         } catch (error) {
             console.error(
-                `[Segment ${segmentInfo.segmentNumber}] Processing failed:`,
+                `[Processing] Error processing segment ${path.basename(segmentInfo.filePath)}:`,
                 error,
             )
-            throw error
+            segmentInfo.error =
+                error instanceof Error ? error : new Error(String(error))
         }
     }
 
@@ -386,9 +385,14 @@ export class StreamManager {
     }
 }
 
-// Convenience function to create and start a stream manager
-export async function createStream(streamUrl: string, config: StreamConfig) {
-    const manager = new StreamManager(streamUrl, config)
-    await manager.start()
-    return manager
+/**
+ * Create a new StreamManager instance
+ */
+export async function createStream(
+    streamUrl: string,
+    config: StreamConfig,
+    dependencies: StreamManagerDependencies = {},
+) {
+    const manager = new StreamManager(streamUrl, config, dependencies)
+    return manager.start()
 }
