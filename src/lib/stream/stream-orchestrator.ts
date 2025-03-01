@@ -1,6 +1,6 @@
 import { StreamManager, createStream } from './stream-manager'
 import type { StreamConfig } from './stream-manager'
-import { supabase } from '@/lib/db/client'
+import { supabaseAdmin as supabase } from '@/lib/db/client'
 import path from 'path'
 
 /**
