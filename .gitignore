@@ -1,4 +1,5 @@
-assets/*
+**/demo/**
+**/assets/**
 .env.*
 
 # dependencies (bun install)
