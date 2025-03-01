@@ -45,7 +45,7 @@ const ENGLISH_IDENTIFIERS = new Set([
 /**
  * Check if a station broadcasts in English
  */
-function isEnglishStation(station: RadioStation): boolean {
+export function isEnglishStation(station: RadioStation): boolean {
     // Check main language
     const mainLanguage = station.language.toLowerCase()
     if (ENGLISH_IDENTIFIERS.has(mainLanguage)) {
@@ -93,7 +93,7 @@ function isEnglishStation(station: RadioStation): boolean {
 /**
  * Fetch stations data from the API
  */
-async function fetchStationsData(): Promise<RadioStation[]> {
+export async function fetchStationsData(): Promise<RadioStation[]> {
     console.log('Initializing RadioBrowserAPI...')
     const api = new RadioBrowserAPI('PulseDataFetcher/1.0')
 
@@ -325,7 +325,9 @@ async function fetchStationsData(): Promise<RadioStation[]> {
 /**
  * Save the stations data to a JSON file
  */
-async function saveStationsData(stations: RadioStation[]): Promise<void> {
+export async function saveStationsData(
+    stations: RadioStation[],
+): Promise<void> {
     try {
         // Create the data directory if it doesn't exist
         await fs.mkdir(DATA_DIR, { recursive: true })
@@ -343,21 +345,19 @@ async function saveStationsData(stations: RadioStation[]): Promise<void> {
     }
 }
 
-/**
- * Main function
- */
-async function main() {
-    try {
-        console.log('Fetching radio stations data...')
-        const stations = await fetchStationsData()
-
-        await saveStationsData(stations)
-
-        console.log('Done!')
-    } catch (error) {
-        console.error('Error in main:', error)
+// Only run the script if it's being executed directly
+if (import.meta.url === process.argv[1]) {
+    async function main() {
+        try {
+            console.log('Fetching radio stations data...')
+            const stations = await fetchStationsData()
+            await saveStationsData(stations)
+            console.log('Done!')
+        } catch (error) {
+            console.error('Error in main:', error)
+            process.exit(1)
+        }
     }
-}
 
-// Run the script
-main()
+    main()
+}

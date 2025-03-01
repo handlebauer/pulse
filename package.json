@@ -4,7 +4,10 @@
     "type": "module",
     "private": true,
     "scripts": {
-        "prepare": "husky"
+        "prepare": "husky",
+        "db:local:seed": "bun run scripts/db/seed.ts",
+        "db:gen-types": "bunx supabase gen types typescript --local > src/lib/db/types.ts",
+        "db:local:init": "bunx supabase db reset && bun run db:gen-types && bun run db:local:seed"
     },
     "devDependencies": {
         "@types/bun": "latest",
@@ -20,6 +23,8 @@
     },
     "dependencies": {
         "@google/generative-ai": "^0.22.0",
-        "dedent": "^1.5.3"
+        "@supabase/supabase-js": "^2.49.1",
+        "dedent": "^1.5.3",
+        "ora": "^8.2.0"
     }
 }

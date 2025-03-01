@@ -40,6 +40,9 @@ export interface RadioStation {
 
     // Content metadata
     tags: string[]
+    category?: 'music' | 'news' | 'talk' | 'sports' | 'mixed' | 'unknown'
+    subcategory?: string
+    isLive?: boolean
 
     // Geographic information
     country: string
@@ -69,8 +72,10 @@ export interface RadioStation {
     isOnline: boolean
 
     // Classification fields (determined by LLM)
-    category?: 'music' | 'news' | 'talk' | 'sports' | 'mixed' | 'unknown'
-    subcategory?: string
+    // Additional fields for determining "live" status
+    is_talk?: boolean
+    has_live_broadcast?: boolean
+    distance?: number // Add distance field for location-based searches
 }
 
 /**
