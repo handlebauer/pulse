@@ -17,5 +17,9 @@
     },
     "peerDependencies": {
         "typescript": "^5"
+    },
+    "dependencies": {
+        "@google/generative-ai": "^0.22.0",
+        "dedent": "^1.5.3"
     }
 }
