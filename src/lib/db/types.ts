@@ -154,6 +154,56 @@ export type Database = {
                 }
                 Relationships: []
             }
+            transcriptions: {
+                Row: {
+                    audio_data: string
+                    created_at: string
+                    duration: unknown | null
+                    end_time: string
+                    error_message: string | null
+                    id: string
+                    start_time: string
+                    station_id: string
+                    status: string
+                    transcription: Json
+                    updated_at: string
+                }
+                Insert: {
+                    audio_data: string
+                    created_at?: string
+                    duration?: unknown | null
+                    end_time: string
+                    error_message?: string | null
+                    id?: string
+                    start_time: string
+                    station_id: string
+                    status?: string
+                    transcription?: Json
+                    updated_at?: string
+                }
+                Update: {
+                    audio_data?: string
+                    created_at?: string
+                    duration?: unknown | null
+                    end_time?: string
+                    error_message?: string | null
+                    id?: string
+                    start_time?: string
+                    station_id?: string
+                    status?: string
+                    transcription?: Json
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: 'transcriptions_station_id_fkey'
+                        columns: ['station_id']
+                        isOneToOne: false
+                        referencedRelation: 'stations'
+                        referencedColumns: ['id']
+                    },
+                ]
+            }
         }
         Views: {
             geography_columns: {
