@@ -17,11 +17,6 @@ export interface DatabaseConfig {
      * Supabase service role key for admin operations
      */
     serviceRoleKey: string
-
-    /**
-     * Supabase anon key for client operations
-     */
-    anonKey?: string
 }
 
 /**
