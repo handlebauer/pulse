@@ -16,7 +16,7 @@
 import fs from 'node:fs/promises'
 import dedent from 'dedent'
 import { type RadioStation, RadioStationCategory } from '@/lib/radio/types'
-import { googleGenerativeAI } from '@/utils/ai'
+import { createGenerativeAIClient } from '@/utils/ai'
 import { resolveFromRoot } from '@/utils/general'
 
 interface ClassificationResult {
@@ -32,8 +32,10 @@ const INPUT_FILE = resolveFromRoot('assets/radio-stations.json')
 const OUTPUT_FILE = resolveFromRoot('assets/radio-stations-classified.json')
 
 // Initialize the Gemini model
-const opts = { model: 'gemini-2.0-flash' }
-const model = googleGenerativeAI.getGenerativeModel(opts)
+const googleAI = createGenerativeAIClient({
+    googleApiKey: process.env.GOOGLE_API_KEY!,
+})
+const model = googleAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
 /**
  * Load stations data from JSON file

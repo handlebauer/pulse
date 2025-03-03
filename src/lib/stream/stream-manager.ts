@@ -3,6 +3,7 @@ import path from 'path'
 import { readdir, stat, mkdir, unlink } from 'fs/promises'
 import { watch } from 'fs'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { fileToBase64 } from '@/utils/general'
 
 /**
  * Information about a completed segment
@@ -353,21 +354,27 @@ export class StreamManager {
                     console.log(
                         `[Processing] Saving transcription to database for segment ${path.basename(segmentInfo.filePath)}`,
                     )
-                    const { error } = await this.dependencies.dbClient
-                        .from('segment_transcriptions')
+                    const response = await this.dependencies.dbClient
+                        .from('transcriptions')
                         .insert({
                             stationId: this.stationId,
-                            segmentPath: segmentInfo.filePath,
-                            segmentNumber: segmentInfo.segmentNumber,
-                            duration: segmentInfo.duration,
+                            audioData: await fileToBase64(segmentInfo.filePath),
+                            startTime: new Date(
+                                segmentInfo.endTime.getTime() -
+                                    segmentInfo.duration * 1000,
+                            ).toISOString(),
                             endTime: segmentInfo.endTime.toISOString(),
                             transcription,
                         })
+                        .single()
 
-                    if (error) {
+                    if (response.error) {
                         console.error(
-                            `[Processing] Error saving transcription:`,
-                            error,
+                            '[Processing] Error saving transcription:\n' +
+                                `Status: ${response.status} (${response.statusText})\n` +
+                                `Error details: ${JSON.stringify(response.error, null, 2)}\n` +
+                                `Table: transcriptions\n` +
+                                `Segment: ${path.basename(segmentInfo.filePath)}`,
                         )
                     }
                 }

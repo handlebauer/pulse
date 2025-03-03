@@ -156,48 +156,42 @@ export type Database = {
             }
             transcriptions: {
                 Row: {
-                    audio_data: string
-                    created_at: string
+                    audioData: string
+                    createdAt: string
                     duration: unknown | null
-                    end_time: string
-                    error_message: string | null
+                    endTime: string
                     id: string
-                    start_time: string
-                    station_id: string
-                    status: string
+                    startTime: string
+                    stationId: string
                     transcription: Json
-                    updated_at: string
+                    updatedAt: string
                 }
                 Insert: {
-                    audio_data: string
-                    created_at?: string
+                    audioData: string
+                    createdAt?: string
                     duration?: unknown | null
-                    end_time: string
-                    error_message?: string | null
+                    endTime: string
                     id?: string
-                    start_time: string
-                    station_id: string
-                    status?: string
+                    startTime: string
+                    stationId: string
                     transcription?: Json
-                    updated_at?: string
+                    updatedAt?: string
                 }
                 Update: {
-                    audio_data?: string
-                    created_at?: string
+                    audioData?: string
+                    createdAt?: string
                     duration?: unknown | null
-                    end_time?: string
-                    error_message?: string | null
+                    endTime?: string
                     id?: string
-                    start_time?: string
-                    station_id?: string
-                    status?: string
+                    startTime?: string
+                    stationId?: string
                     transcription?: Json
-                    updated_at?: string
+                    updatedAt?: string
                 }
                 Relationships: [
                     {
-                        foreignKeyName: 'transcriptions_station_id_fkey'
-                        columns: ['station_id']
+                        foreignKeyName: 'transcriptions_stationId_fkey'
+                        columns: ['stationId']
                         isOneToOne: false
                         referencedRelation: 'stations'
                         referencedColumns: ['id']

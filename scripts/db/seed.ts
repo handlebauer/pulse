@@ -17,7 +17,12 @@ import { resolveFromRoot } from '@/utils/general'
 import { fetchStationsData, saveStationsData } from '../radio/fetch-stations'
 import { classifyStations } from '../radio/classify-stations'
 import type { RadioStation } from '@/lib/radio/types'
-import { supabaseAdmin as supabase } from '@/lib/db/client'
+import { createClient } from '@supabase/supabase-js'
+
+// Create Supabase admin client
+const supabaseUrl = process.env.SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // File paths for cached data
 const CLASSIFIED_STATIONS_FILE = resolveFromRoot(
@@ -85,32 +90,45 @@ async function seedDatabase(stations: RadioStation[]) {
 
         const { error } = await supabase.from('stations').upsert(
             batch.map((station) => ({
+                // Basic information
                 stationId: station.stationId,
                 stationName: station.stationName,
                 streamUrl: station.streamUrl,
                 websiteUrl: station.websiteUrl,
                 logoUrl: station.logoUrl,
+
+                // Content metadata
                 tags: station.tags,
                 category: station.category,
                 subcategory: station.subcategory,
                 isLive: station.isLive ?? false,
+
+                // Geographic information
                 country: station.country,
                 countryCode: station.countryCode,
                 state: station.state,
                 latitude: station.latitude,
                 longitude: station.longitude,
                 hasGeolocation: station.hasGeolocation,
+
+                // Language information
                 language: station.language,
                 languageCodes: station.languageCodes,
+
+                // Technical specifications
                 codec: station.codec,
                 bitrate: station.bitrate,
                 isHls: station.isHls,
                 hasSslError: station.hasSslError,
                 hasExtendedInfo: station.hasExtendedInfo,
+
+                // Popularity and engagement
                 votes: station.votes,
                 clickCount: station.clickCount,
                 clickTrend: station.clickTrend,
-                isOnline: station.isOnline,
+
+                // Status information
+                isOnline: station.isOnline ?? true,
             })),
             { onConflict: 'stationId' },
         )

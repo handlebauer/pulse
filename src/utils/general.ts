@@ -25,3 +25,15 @@ export function getProjectRoot(): string {
 export function resolveFromRoot(relativePath: string): string {
     return path.resolve(getProjectRoot(), relativePath)
 }
+
+/**
+ * Convert a file to base64 string
+ *
+ * @param filePath - Path to the file to convert
+ * @returns Promise that resolves with the base64 string
+ */
+export async function fileToBase64(filePath: string): Promise<string> {
+    const file = Bun.file(filePath)
+    const buffer = await file.arrayBuffer()
+    return Buffer.from(buffer).toString('base64')
+}
