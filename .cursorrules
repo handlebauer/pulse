@@ -1,0 +1,14 @@
+# Package manager
+
+- Use `bun` as package manager (not `npm` or `yarn` or anything else)
+- Use `bunx --bun shadcn@latest add <component>` when installing new shadcn components
+
+# Database
+
+- Use conventience types from Supabase generated types, e.g.:
+
+```ts
+import { Tables } from '@/lib/db/types'
+
+type RadioStation = Tables<'stations'>
+```
