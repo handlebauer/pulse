@@ -12,3 +12,11 @@ import { Tables } from '@/lib/db/types'
 
 type RadioStation = Tables<'stations'>
 ```
+
+- There are Supabase server and browser clients in src/lib/db/clients
+
+```ts
+import { createClient } from '@/lib/db/clients/server'
+// or
+import { createClient } from '@/lib/db/clients/browser'
+```
