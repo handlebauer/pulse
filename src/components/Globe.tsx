@@ -60,31 +60,45 @@ export function Globe({ stations }: GlobeProps) {
             })
 
             map.current.addLayer({
+                id: 'stations-hit-area',
+                type: 'circle',
+                source: 'stations',
+                paint: {
+                    'circle-radius': 15,
+                    'circle-color': '#fff',
+                    'circle-opacity': 0,
+                },
+            })
+
+            map.current.addLayer({
                 id: 'stations',
                 type: 'circle',
                 source: 'stations',
                 paint: {
-                    'circle-radius': 4,
+                    'circle-radius': 6,
                     'circle-color': '#fff',
                     'circle-opacity': 0.8,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#fff',
+                    'circle-stroke-opacity': 0.3,
                 },
             })
 
             // Change cursor to pointer when hovering over a station
-            map.current.on('mouseenter', 'stations', () => {
+            map.current.on('mouseenter', 'stations-hit-area', () => {
                 if (map.current) {
                     map.current.getCanvas().style.cursor = 'pointer'
                 }
             })
 
-            map.current.on('mouseleave', 'stations', () => {
+            map.current.on('mouseleave', 'stations-hit-area', () => {
                 if (map.current) {
                     map.current.getCanvas().style.cursor = ''
                 }
             })
 
             // Show popup on click
-            map.current.on('click', 'stations', (e) => {
+            map.current.on('click', 'stations-hit-area', (e) => {
                 if (!map.current || !e.features?.[0]) return
 
                 const feature = e.features[0]
