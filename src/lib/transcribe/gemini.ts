@@ -39,11 +39,6 @@ export function createTranscriptionService(config: TranscriptionConfig) {
     async function transcribeAudio(
         audioFilePath: string,
     ): Promise<TranscriptionResult[]> {
-        if (!config.enabled) {
-            console.log('[Transcription] Transcription is disabled')
-            return []
-        }
-
         // Generate content using a prompt and the metadata of the uploaded file.
         const result = await model.generateContent([
             {

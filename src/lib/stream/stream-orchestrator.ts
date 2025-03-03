@@ -71,12 +71,19 @@ export class StreamOrchestrator {
             this.dependencies.dbClient = createSupabaseClient(config.database)
         }
 
-        // If transcription config is provided and enabled, create a transcription service
-        if (config.transcription && config.transcription.enabled !== false) {
-            const transcriptionService = createTranscriptionService(
-                config.transcription,
-            )
-            this.dependencies.transcriptionService = transcriptionService
+        // Initialize transcription service if configured
+        if (config.transcription) {
+            const { model, googleApiKey, enabled } = config.transcription
+            // Enable transcription if both model and API key are present, unless explicitly disabled
+            const shouldEnableTranscription =
+                model && googleApiKey && enabled !== false
+
+            if (shouldEnableTranscription) {
+                const transcriptionService = createTranscriptionService(
+                    config.transcription,
+                )
+                this.dependencies.transcriptionService = transcriptionService
+            }
         }
     }
 

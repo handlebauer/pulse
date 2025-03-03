@@ -71,8 +71,8 @@ const config: RadioLibraryConfig = {
     // Transcription configuration (optional)
     transcription: {
         googleApiKey: 'your-google-api-key',
-        enabled: true,
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.0-flash', // If both model and googleApiKey are set, transcription is enabled by default
+        enabled: true, // Defaults to true (set to false to disable transcription even when model and API key are set)
     },
 
     // Radio Browser API configuration (optional)
@@ -154,8 +154,8 @@ const config = {
     // Transcription configuration
     transcription: {
         googleApiKey: 'your-google-api-key',
-        enabled: true, // Set to false to disable transcription
-        model: 'gemini-2.0-flash', // Optional, defaults to 'gemini-2.0-flash'
+        model: 'gemini-2.0-flash', // If both model and googleApiKey are set, transcription is enabled by default
+        enabled: false, // Optional: explicitly disable transcription even when model and API key are set
     },
 
     // ... other config ...

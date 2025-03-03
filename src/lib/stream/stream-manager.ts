@@ -45,7 +45,9 @@ export interface StreamManagerDependencies {
     dbClient?: SupabaseClient
 
     /**
-     * Transcription service for audio transcription
+     * Transcription service for audio transcription.
+     * This will be initialized if both model and googleApiKey are provided in the transcription config,
+     * unless explicitly disabled by setting enabled: false
      */
     transcriptionService?: {
         transcribeAudio: (
@@ -369,6 +371,10 @@ export class StreamManager {
                         )
                     }
                 }
+            } else {
+                console.log(
+                    `[Processing] No transcription service provided, skipping transcription for segment ${path.basename(segmentInfo.filePath)}`,
+                )
             }
         } catch (error) {
             console.error(
