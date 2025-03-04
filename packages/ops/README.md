@@ -132,7 +132,7 @@ See `.env.example` for a complete list of configuration options.
 
 ## Development
 
-This package is part of the Pulse Radio monorepo and depends on the `@pulse/radio` and `@pulse/web` packages.
+This package is part of the Pulse monorepo and depends on the `@pulse/radio` and `@pulse/web` packages.
 
 ## License
 
