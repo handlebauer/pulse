@@ -23,7 +23,8 @@ export interface OpsConfig {
 
     // Paths configuration
     paths: {
-        stationsJsonPath: string
+        referenceStationsPath: string
+        filteredStationsPath: string
         projectRoot: string
     }
 
@@ -53,7 +54,11 @@ export const defaultConfig: OpsConfig = {
     },
 
     paths: {
-        stationsJsonPath: path.join(
+        referenceStationsPath: path.join(
+            projectRoot,
+            'packages/web/scripts/db/reference-stations.json',
+        ),
+        filteredStationsPath: path.join(
             projectRoot,
             'packages/web/scripts/db/stations.json',
         ),

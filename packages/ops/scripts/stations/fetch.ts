@@ -3,10 +3,10 @@
  * Fetch Stations Script
  *
  * This script fetches radio stations from the Radio Browser API
- * and saves them to a JSON file.
+ * and saves them to a JSON file as the reference dataset.
  */
 import ora from 'ora'
-import { writeStationsToFile } from '@/lib/db'
+import { writeReferenceStations } from '@/lib/db'
 import createLogger from '@/lib/logger'
 import { defaultConfig } from '@/config'
 
@@ -31,12 +31,12 @@ async function main() {
             `Fetched ${stations.length} stations from Radio Browser API`,
         )
 
-        // Save stations to JSON file
-        await writeStationsToFile(stations)
+        // Save stations to reference JSON file
+        await writeReferenceStations(stations)
 
         logger.success(`Fetch process completed successfully`)
         logger.info(
-            `Saved ${stations.length} stations to ${defaultConfig.paths.stationsJsonPath}`,
+            `Saved ${stations.length} stations to ${defaultConfig.paths.referenceStationsPath}`,
         )
     } catch (error) {
         spinner.fail('Failed to fetch stations')

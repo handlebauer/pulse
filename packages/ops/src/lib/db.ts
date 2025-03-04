@@ -22,35 +22,76 @@ export function createSupabaseClient() {
 }
 
 /**
- * Read stations from JSON file
+ * Read reference stations from JSON file
  */
-export async function readStationsFromFile() {
+export async function readReferenceStations() {
     try {
-        const filePath = defaultConfig.paths.stationsJsonPath
+        const filePath = defaultConfig.paths.referenceStationsPath
         const data = await fs.readFile(filePath, 'utf-8')
         return JSON.parse(data)
     } catch (error) {
-        logger.error('Failed to read stations from file', error)
+        logger.error('Failed to read reference stations from file', error)
         throw error
     }
 }
 
 /**
- * Write stations to JSON file
+ * Write reference stations to JSON file
  */
-export async function writeStationsToFile(stations: any[]) {
+export async function writeReferenceStations(stations: any[]) {
     try {
-        const filePath = defaultConfig.paths.stationsJsonPath
+        const filePath = defaultConfig.paths.referenceStationsPath
         await fs.writeFile(filePath, JSON.stringify(stations, null, 2), 'utf-8')
-        logger.success(`Saved ${stations.length} stations to ${filePath}`)
+        logger.success(
+            `Saved ${stations.length} reference stations to ${filePath}`,
+        )
     } catch (error) {
-        logger.error('Failed to write stations to file', error)
+        logger.error('Failed to write reference stations to file', error)
         throw error
     }
 }
 
+/**
+ * Read filtered stations from JSON file
+ */
+export async function readFilteredStations() {
+    try {
+        const filePath = defaultConfig.paths.filteredStationsPath
+        const data = await fs.readFile(filePath, 'utf-8')
+        return JSON.parse(data)
+    } catch (error) {
+        logger.error('Failed to read filtered stations from file', error)
+        throw error
+    }
+}
+
+/**
+ * Write filtered stations to JSON file
+ */
+export async function writeFilteredStations(stations: any[]) {
+    try {
+        const filePath = defaultConfig.paths.filteredStationsPath
+        await fs.writeFile(filePath, JSON.stringify(stations, null, 2), 'utf-8')
+        logger.success(
+            `Saved ${stations.length} filtered stations to ${filePath}`,
+        )
+    } catch (error) {
+        logger.error('Failed to write filtered stations to file', error)
+        throw error
+    }
+}
+
+// For backward compatibility
+export const readStationsFromFile = readFilteredStations
+export const writeStationsToFile = writeFilteredStations
+
 export default {
     createSupabaseClient,
+    readReferenceStations,
+    writeReferenceStations,
+    readFilteredStations,
+    writeFilteredStations,
+    // For backward compatibility
     readStationsFromFile,
     writeStationsToFile,
 }

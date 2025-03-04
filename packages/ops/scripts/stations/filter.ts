@@ -6,10 +6,9 @@
  * while preserving the original complete dataset for reference.
  */
 import ora from 'ora'
-import path from 'path'
-import fs from 'fs'
-import { readStationsFromFile } from '@/lib/db'
+import { readReferenceStations, writeFilteredStations } from '@/lib/db'
 import createLogger from '@/lib/logger'
+import { defaultConfig } from '@/config'
 
 const logger = createLogger('FilterStations')
 
@@ -22,13 +21,6 @@ interface RadioStation {
     subcategory?: string
     [key: string]: any // Allow for additional properties
 }
-
-// Path to the filtered stations output file
-const WEB_SCRIPTS_DIR = path.join(process.cwd(), '..', 'web', 'scripts', 'db')
-const FILTERED_STATIONS_FILE = path.join(
-    WEB_SCRIPTS_DIR,
-    'filtered-stations.json',
-)
 
 /**
  * Filter stations to only include talk and news stations
@@ -46,31 +38,6 @@ function filterTalkAndNewsStations(stations: RadioStation[]): RadioStation[] {
 }
 
 /**
- * Save the filtered stations to a JSON file
- */
-async function saveFilteredStations(stations: RadioStation[]): Promise<void> {
-    const spinner = ora('Saving filtered stations...').start()
-    try {
-        // Ensure the directory exists
-        fs.mkdirSync(path.dirname(FILTERED_STATIONS_FILE), { recursive: true })
-
-        // Write the filtered stations to file
-        fs.writeFileSync(
-            FILTERED_STATIONS_FILE,
-            JSON.stringify(stations, null, 4),
-            'utf-8',
-        )
-        spinner.succeed(
-            `Saved ${stations.length} filtered stations to ${FILTERED_STATIONS_FILE}`,
-        )
-    } catch (error) {
-        spinner.fail('Error saving filtered stations')
-        logger.error('Error saving filtered stations:', error)
-        throw error
-    }
-}
-
-/**
  * Main function
  */
 async function main() {
@@ -78,15 +45,19 @@ async function main() {
 
     try {
         // Read the complete stations dataset
-        const spinner = ora('Reading stations from file...').start()
-        const stations = await readStationsFromFile()
-        spinner.succeed(`Read ${stations.length} stations from file`)
+        const spinner = ora('Reading reference stations from file...').start()
+        const stations = await readReferenceStations()
+        spinner.succeed(`Read ${stations.length} reference stations from file`)
 
         // Filter stations
         const filteredStations = filterTalkAndNewsStations(stations)
 
         // Save filtered stations
-        await saveFilteredStations(filteredStations)
+        const saveSpinner = ora('Saving filtered stations...').start()
+        await writeFilteredStations(filteredStations)
+        saveSpinner.succeed(
+            `Saved ${filteredStations.length} filtered stations to ${defaultConfig.paths.filteredStationsPath}`,
+        )
 
         logger.success('Station filtering completed successfully')
     } catch (error) {
