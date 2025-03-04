@@ -50,6 +50,13 @@ create policy "Allow insert/update access to service role only"
     using (true)
     with check (true);
 
+-- Allow public read access to transcriptions
+create policy "Allow public read access to transcriptions"
+    on public.transcriptions
+    for select
+    to anon, authenticated
+    using (true);
+
 -- Comments
 comment on table public.transcriptions is 'Stores radio stream transcriptions with their associated audio segments';
 comment on column public.transcriptions."audioData" is 'Base64 encoded audio segment data';
