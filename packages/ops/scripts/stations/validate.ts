@@ -6,7 +6,6 @@
  * and updates their online status in the JSON file.
  */
 import ora from 'ora'
-import figures from 'figures'
 import { readStationsFromFile, writeStationsToFile } from '@/lib/db'
 import createLogger from '@/lib/logger'
 

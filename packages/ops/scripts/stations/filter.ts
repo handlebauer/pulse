@@ -8,8 +8,8 @@
 import ora from 'ora'
 import path from 'path'
 import fs from 'fs'
-import { readStationsFromFile } from '../../src/lib/db'
-import createLogger from '../../src/lib/logger'
+import { readStationsFromFile } from '@/lib/db'
+import createLogger from '@/lib/logger'
 
 const logger = createLogger('FilterStations')
 

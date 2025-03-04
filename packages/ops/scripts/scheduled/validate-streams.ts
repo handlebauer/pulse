@@ -7,8 +7,8 @@
  * It can be called by cron jobs, monitoring tools, etc.
  */
 import { CronJob } from 'cron'
-import createLogger from '../../src/lib/logger'
-import { defaultConfig } from '../../src/config'
+import createLogger from '@/lib/logger'
+import { defaultConfig } from '@/config'
 import { validateAllStations } from '../stations/validate'
 
 const logger = createLogger('ScheduledValidation')

@@ -7,8 +7,8 @@
  */
 import ora from 'ora'
 import dedent from 'dedent'
-import { readStationsFromFile, writeStationsToFile } from '../../src/lib/db'
-import createLogger from '../../src/lib/logger'
+import { readStationsFromFile, writeStationsToFile } from '@/lib/db'
+import createLogger from '@/lib/logger'
 
 const logger = createLogger('ClassifyStations')
 
