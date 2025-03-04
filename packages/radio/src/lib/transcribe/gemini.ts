@@ -54,9 +54,15 @@ export function createTranscriptionService(config: TranscriptionConfig) {
 
         try {
             const text = result.response.text()
-            console.log('[Transcription] Raw result:', text)
 
-            const parsed = JSON.parse(text)
+            let parsed = null
+
+            try {
+                parsed = JSON.parse(text)
+            } catch {
+                // Gemini failed to correctly structure output
+                console.log('[Transcription] Failed to parse result:', text)
+            }
 
             // Ensure the result matches our expected format
             if (Array.isArray(parsed)) {
