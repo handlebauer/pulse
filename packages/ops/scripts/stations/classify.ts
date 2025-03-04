@@ -113,13 +113,15 @@ async function classifyStationsBatch(
         logger.info(`Classifying batch of ${stations.length} stations...`)
 
         // Check if Google API key is set
-        if (!process.env.GOOGLE_API_KEY) {
-            throw new Error('GOOGLE_API_KEY environment variable is not set')
+        if (!process.env.CLASSIFY_GOOGLE_API_KEY) {
+            throw new Error(
+                'CLASSIFY_GOOGLE_API_KEY environment variable is not set',
+            )
         }
 
         // Create a fetch request to Google's Gemini API
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${process.env.CLASSIFY_GOOGLE_API_KEY}`,
             {
                 method: 'POST',
                 headers: {
