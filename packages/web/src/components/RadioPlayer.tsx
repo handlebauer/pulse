@@ -33,36 +33,37 @@ export function RadioPlayer({
     const hasTranscription = !!transcriptionData?.recentText
 
     return (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/80 px-6 pr-10 pt-4 pb-2 border border-zinc-800 backdrop-blur-sm p-4 rounded-lg shadow-lg flex flex-col items-center gap-4 z-50 w-auto max-w-md">
-            <div className="flex items-center gap-4 w-full">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={togglePlayPause}
-                    className="text-white hover:bg-white/20 hover:text-white cursor-pointer"
-                >
-                    {isPlaying ? (
-                        <Pause className="h-6 w-6" />
-                    ) : (
-                        <Play className="h-6 w-6" />
-                    )}
-                </Button>
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/80 px-6 pr-10 pt-4 pb-3 border border-zinc-800 backdrop-blur-sm p-4 rounded-lg shadow-lg flex flex-col items-center gap-4 z-50 w-auto max-w-md">
+            <div className="flex flex-col w-full">
+                <span className="text-sm font-medium text-white mb-2 truncate pl-4">
+                    {stationName}
+                </span>
 
-                <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-sm font-medium text-white mb-1 truncate">
-                        {stationName}
-                    </span>
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4 w-full">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={togglePlayPause}
+                        className="text-white pl-1 hover:bg-white/20 hover:text-white cursor-pointer flex items-center justify-center h-10 w-10"
+                    >
+                        {isPlaying ? (
+                            <Pause className="h-6 w-6" />
+                        ) : (
+                            <Play className="h-6 w-6" />
+                        )}
+                    </Button>
+
+                    <div className="flex items-center gap-2 flex-1">
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={toggleMute}
-                            className="text-white hover:bg-white/20 hover:text-white cursor-pointer"
+                            className="text-white hover:bg-white/20 hover:text-white cursor-pointer h-10 w-10 flex items-center justify-center"
                         >
                             {isMuted ? (
-                                <VolumeX className="h-4 w-4" />
+                                <VolumeX className="h-5 w-5" />
                             ) : (
-                                <Volume2 className="h-4 w-4" />
+                                <Volume2 className="h-5 w-5" />
                             )}
                         </Button>
                         <Slider
@@ -73,19 +74,21 @@ export function RadioPlayer({
                             className="w-[100px]"
                         />
                     </div>
-                </div>
 
-                {hasTranscription && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowTranscription(!showTranscription)}
-                        className={`text-white hover:bg-white/20 hover:text-white cursor-pointer ${showTranscription ? 'bg-white/20' : ''}`}
-                        title="Show transcription"
-                    >
-                        <MessageSquare className="h-5 w-5" />
-                    </Button>
-                )}
+                    {hasTranscription && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                                setShowTranscription(!showTranscription)
+                            }
+                            className={`text-white hover:bg-white/20 hover:text-white cursor-pointer h-10 w-10 flex items-center justify-center ${showTranscription ? 'bg-white/20' : ''}`}
+                            title="Show transcription"
+                        >
+                            <MessageSquare className="h-5 w-5" />
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* Transcription panel */}
