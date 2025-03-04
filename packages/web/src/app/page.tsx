@@ -20,6 +20,8 @@ export default async function Home() {
         .eq('isOnline', true)
         .throwOnError()) as { data: Station[] }
 
+    console.log(`Loading ${stations.length} stations`)
+
     return (
         <main className="bg-black">
             <h1 className="text-2xl font-bold text-white mb-6 absolute top-4 left-4 z-10">

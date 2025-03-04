@@ -8,21 +8,21 @@ export const setupMapEventHandlers = (
     refs: MapRefs,
     onStationSelect: (station: Station) => void,
 ) => {
-    // Cursor interactions
-    map.on('mouseenter', 'stations-hit-area', () => {
+    // Cursor interactions for unclustered points
+    map.on('mouseenter', 'unclustered-point-hit-area', () => {
         if (map) {
             map.getCanvas().style.cursor = 'pointer'
         }
     })
 
-    map.on('mouseleave', 'stations-hit-area', () => {
+    map.on('mouseleave', 'unclustered-point-hit-area', () => {
         if (map) {
             map.getCanvas().style.cursor = ''
         }
     })
 
-    // Click handling
-    map.on('click', 'stations-hit-area', (e) => {
+    // Click handling for unclustered points
+    map.on('click', 'unclustered-point-hit-area', (e) => {
         if (!map || !e.features?.[0]) return
 
         const feature = e.features[0]
