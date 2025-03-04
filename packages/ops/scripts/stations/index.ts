@@ -7,6 +7,7 @@
  * 2. Classify stations using AI
  * 3. Validate station streams
  * 4. Filter stations for specific use cases
+ * 5. Geolocate stations without location data
  *
  * The pipeline can be run in full or partially by specifying steps.
  */
@@ -18,6 +19,7 @@ import fetchStations from './fetch'
 import classifyStations from './classify'
 import { validateAllStations } from './validate'
 import filterStations from './filter'
+import geolocateStations from './geolocate'
 
 const logger = createLogger('StationsPipeline')
 
@@ -27,19 +29,28 @@ const STEPS = {
     CLASSIFY: 'classify',
     VALIDATE: 'validate',
     FILTER: 'filter',
+    GEOLOCATE: 'geolocate',
 }
 
 // Available pipeline configurations
 const PIPELINES = {
-    FULL: [STEPS.FETCH, STEPS.CLASSIFY, STEPS.VALIDATE, STEPS.FILTER],
+    FULL: [
+        STEPS.FETCH,
+        STEPS.CLASSIFY,
+        STEPS.VALIDATE,
+        STEPS.FILTER,
+        STEPS.GEOLOCATE,
+    ],
     FETCH_ONLY: [STEPS.FETCH],
     CLASSIFY_ONLY: [STEPS.CLASSIFY],
     VALIDATE_ONLY: [STEPS.VALIDATE],
     FILTER_ONLY: [STEPS.FILTER],
+    GEOLOCATE_ONLY: [STEPS.GEOLOCATE],
     FETCH_CLASSIFY: [STEPS.FETCH, STEPS.CLASSIFY],
     CLASSIFY_VALIDATE: [STEPS.CLASSIFY, STEPS.VALIDATE],
     VALIDATE_FILTER: [STEPS.VALIDATE, STEPS.FILTER],
-    NO_FILTER: [STEPS.FETCH, STEPS.CLASSIFY, STEPS.VALIDATE],
+    FILTER_GEOLOCATE: [STEPS.FILTER, STEPS.GEOLOCATE],
+    NO_GEOLOCATE: [STEPS.FETCH, STEPS.CLASSIFY, STEPS.VALIDATE, STEPS.FILTER],
 }
 
 /**
@@ -60,6 +71,9 @@ async function runStep(step: string) {
             break
         case STEPS.FILTER:
             await filterStations()
+            break
+        case STEPS.GEOLOCATE:
+            await geolocateStations()
             break
         default:
             logger.error(`Unknown pipeline step: ${step}`)
@@ -115,6 +129,9 @@ async function main() {
             case 'filter':
                 pipeline = PIPELINES.FILTER_ONLY
                 break
+            case 'geolocate':
+                pipeline = PIPELINES.GEOLOCATE_ONLY
+                break
             case 'fetch-classify':
                 pipeline = PIPELINES.FETCH_CLASSIFY
                 break
@@ -124,8 +141,11 @@ async function main() {
             case 'validate-filter':
                 pipeline = PIPELINES.VALIDATE_FILTER
                 break
-            case 'no-filter':
-                pipeline = PIPELINES.NO_FILTER
+            case 'filter-geolocate':
+                pipeline = PIPELINES.FILTER_GEOLOCATE
+                break
+            case 'no-geolocate':
+                pipeline = PIPELINES.NO_GEOLOCATE
                 break
             case 'full':
                 pipeline = PIPELINES.FULL
@@ -133,7 +153,7 @@ async function main() {
             default:
                 logger.error(`Unknown pipeline: ${pipelineArg}`)
                 console.log(
-                    'Available pipelines: fetch, classify, validate, filter, fetch-classify, classify-validate, validate-filter, no-filter, full',
+                    'Available pipelines: fetch, classify, validate, filter, geolocate, fetch-classify, classify-validate, validate-filter, filter-geolocate, no-geolocate, full',
                 )
                 process.exit(1)
         }

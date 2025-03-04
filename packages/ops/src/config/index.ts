@@ -77,5 +77,3 @@ export const defaultConfig: OpsConfig = {
 }
 
 export default defaultConfig
-
-console.log(defaultConfig)
