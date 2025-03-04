@@ -16,6 +16,7 @@ import { popupStyles } from './map/styles'
 import { removePopup } from './map/popupManager'
 import { TopicLayer } from './map/TopicLayer'
 import { useTranscriptions } from '@/hooks/useTranscriptions'
+import { SubtitleTranscription } from './SubtitleTranscription'
 
 interface GlobeProps {
     stations: Station[]
@@ -26,6 +27,7 @@ export function Globe({ stations }: GlobeProps) {
     const refs = useRef<MapRefs>({ map: null, popup: null })
     const [selectedStation, setSelectedStation] = useState<Station | null>(null)
     const { transcriptionMap, isLoading } = useTranscriptions()
+    const [showTranscription, setShowTranscription] = useState(false)
 
     useEffect(() => {
         if (!mapContainer.current) return
@@ -95,12 +97,26 @@ export function Globe({ stations }: GlobeProps) {
                 transcriptionMap={transcriptionMap}
             />
 
+            {/* Subtitle-style transcription */}
+            {selectedStation &&
+                selectedStation.id &&
+                transcriptionMap[selectedStation.id] && (
+                    <SubtitleTranscription
+                        key={`subtitle-${selectedStation.id}-${transcriptionMap[selectedStation.id].updatedAt}`}
+                        transcriptionData={transcriptionMap[selectedStation.id]}
+                        visible={showTranscription}
+                    />
+                )}
+
             {/* Radio player */}
             {selectedStation && (
                 <RadioPlayer
                     stationName={selectedStation.stationName}
                     streamUrl={selectedStation.streamUrl}
                     stationId={selectedStation.id}
+                    showTranscription={showTranscription}
+                    setShowTranscription={setShowTranscription}
+                    transcriptionMap={transcriptionMap}
                 />
             )}
 

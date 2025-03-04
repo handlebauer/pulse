@@ -2,20 +2,25 @@ import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Play, Pause, Volume2, VolumeX, MessageSquare } from 'lucide-react'
 import { useAudioPlayer } from '@/hooks/useAudioPlayer'
-import { useTranscriptions } from '@/hooks/useTranscriptions'
-import { useState, useRef, useEffect } from 'react'
-import { TranscriptionPanel } from '@/components/TranscriptionPanel'
+import { TranscriptionData } from '@/hooks/useTranscriptions'
+import { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react'
 
 interface RadioPlayerProps {
     stationName: string
     streamUrl: string
     stationId?: string
+    showTranscription: boolean
+    setShowTranscription: Dispatch<SetStateAction<boolean>>
+    transcriptionMap: Record<string, TranscriptionData>
 }
 
 export function RadioPlayer({
     stationName,
     streamUrl,
     stationId,
+    showTranscription,
+    setShowTranscription,
+    transcriptionMap,
 }: RadioPlayerProps) {
     const {
         isPlaying,
@@ -25,9 +30,6 @@ export function RadioPlayer({
         handleVolumeChange,
         toggleMute,
     } = useAudioPlayer({ streamUrl })
-
-    const { transcriptionMap } = useTranscriptions()
-    const [showTranscription, setShowTranscription] = useState(false)
 
     // State for draggable functionality
     const [position, setPosition] = useState<{ x: number; y: number }>({
@@ -183,11 +185,6 @@ export function RadioPlayer({
                     )}
                 </div>
             </div>
-
-            {/* Transcription panel */}
-            {showTranscription && transcriptionData && (
-                <TranscriptionPanel transcriptionData={transcriptionData} />
-            )}
         </div>
     )
 }
