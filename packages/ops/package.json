@@ -1,0 +1,29 @@
+{
+    "name": "@pulse/ops",
+    "version": "0.0.1",
+    "description": "Operational scripts and services for Pulse",
+    "module": "index.ts",
+    "type": "module",
+    "scripts": {
+        "stations:fetch": "bun run scripts/stations/fetch.ts",
+        "stations:classify": "bun run scripts/stations/classify.ts",
+        "stations:validate": "bun run scripts/stations/validate.ts",
+        "stations:pipeline": "bun run scripts/stations/index.ts",
+        "scheduled:validate": "bun run scripts/scheduled/validate-streams.ts",
+        "service:orchestrator": "bun run src/services/orchestrator.ts"
+    },
+    "dependencies": {
+        "@pulse/radio": "workspace:*",
+        "ora": "^8.0.1",
+        "dedent": "^1.5.1",
+        "figures": "^5.0.0",
+        "cron": "^3.1.6"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "prettier": "3.5.3"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    }
+}
