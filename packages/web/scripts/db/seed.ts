@@ -18,21 +18,6 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 const STATIONS_FILE = 'scripts/db/stations.json'
 
 /**
- * Filter stations to only include talk and news stations
- */
-function filterTalkAndNewsStations(stations: RadioStation[]): RadioStation[] {
-    const filtered = stations.filter(
-        (station) => station.category === 'talk' || station.category === 'news',
-    )
-    console.log(
-        `\nFiltered ${stations.length} stations down to ${filtered.length} talk/news stations`,
-        `\n- Talk stations: ${filtered.filter((s) => s.category === 'talk').length}`,
-        `\n- News stations: ${filtered.filter((s) => s.category === 'news').length}`,
-    )
-    return filtered
-}
-
-/**
  * Load stations from the JSON file
  */
 async function loadStations(): Promise<RadioStation[]> {
@@ -165,8 +150,7 @@ async function main() {
         const stations = await loadStations()
 
         // Filter and seed only talk/news stations
-        const filteredStations = filterTalkAndNewsStations(stations)
-        await seedDatabase(filteredStations)
+        await seedDatabase(stations)
 
         console.log(
             `\n${figures.tick} Database seeding completed successfully!\n`,
