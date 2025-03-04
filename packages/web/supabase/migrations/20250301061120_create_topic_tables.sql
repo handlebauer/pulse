@@ -179,6 +179,44 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Create function to update station_topics with proper handling of first_mentioned_at and mention_count
+CREATE OR REPLACE FUNCTION public.upsert_station_topic(
+    p_station_id UUID,
+    p_topic_id UUID,
+    p_relevance_score FLOAT,
+    p_last_mentioned_at TIMESTAMPTZ
+)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO public.station_topics (
+        "stationId", 
+        "topicId", 
+        relevance_score, 
+        last_mentioned_at,
+        first_mentioned_at,
+        mention_count
+    )
+    VALUES (
+        p_station_id,
+        p_topic_id,
+        p_relevance_score,
+        p_last_mentioned_at,
+        p_last_mentioned_at,  -- Set first_mentioned_at to the current timestamp for new records
+        1                     -- Initialize mention_count to 1 for new records
+    )
+    ON CONFLICT ("stationId", "topicId") DO UPDATE SET
+        relevance_score = p_relevance_score,
+        last_mentioned_at = p_last_mentioned_at,
+        mention_count = public.station_topics.mention_count + 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Grant appropriate permissions for the new function
+ALTER FUNCTION public.upsert_station_topic(UUID, UUID, FLOAT, TIMESTAMPTZ) SECURITY DEFINER;
+GRANT EXECUTE ON FUNCTION public.upsert_station_topic(UUID, UUID, FLOAT, TIMESTAMPTZ) TO service_role;
+GRANT EXECUTE ON FUNCTION public.upsert_station_topic(UUID, UUID, FLOAT, TIMESTAMPTZ) TO anon;
+GRANT EXECUTE ON FUNCTION public.upsert_station_topic(UUID, UUID, FLOAT, TIMESTAMPTZ) TO authenticated;
+
 -- Add timestamps triggers for all tables
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

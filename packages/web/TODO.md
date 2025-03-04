@@ -34,54 +34,54 @@
         - Add all tables to the Supabase realtime publication
         - Test realtime events with Supabase client
 
-- [ ] Topic Processing Engine (in @pulse/radio)
+- [x] Topic Processing Engine (in @pulse/radio)
 
-    - [ ] Implement AI-powered topic extraction using Gemini API
+    - [x] Implement AI-powered topic extraction using Gemini API
         - Create a `TopicExtractor` class in `src/lib/topics/topic-extractor.ts`
         - Use Gemini 2.0 Flash model with formatted prompt to extract topics
         - Request proper JSON response with topic name, normalized form, and relevance score
         - Handle rate limiting and API failures gracefully
-    - [ ] Create normalized topic representation system
+    - [x] Create normalized topic representation system
         - Process topic names to create consistent normalized forms (lowercase, singular form)
         - Remove stop words and unnecessary modifiers
         - Handle synonyms and closely related terms (e.g., "president" and "presidency")
         - Ensure consistent naming for people, places, and events
-    - [ ] Develop relevance scoring algorithm
+    - [x] Develop relevance scoring algorithm
         - Score topics based on frequency, prominence in discussion
         - Weight named entities (people, organizations, places) higher
         - Consider context and position in transcription
         - Scale scores between 0.0-1.0 with clear thresholds for significance
-    - [ ] Implement functions to identify relationships between topics
+    - [x] Implement functions to identify relationships between topics
         - Detect subtopics and parent topics
         - Identify topics that frequently co-occur
         - Create semantic relationships between related topics
         - Build topic graph for navigation and discovery
-    - [ ] Create connection strength calculation
+    - [x] Create connection strength calculation
         - Calculate strength based on both stations' relevance scores for the topic
         - Consider the recency of mentions
         - Apply decay factor for older mentions
         - Normalize strengths on a 0.0-1.0 scale
 
-- [ ] Scheduled Processing (in @pulse/ops)
-    - [ ] Create script to process recent transcriptions
+- [x] Scheduled Processing (in @pulse/ops)
+    - [x] Create script to process recent transcriptions
         - Build `process-topics.ts` script that:
             - Fetches recent transcriptions (last 15 minutes)
             - Extracts topics from each transcription
             - Saves topics to database with proper relationships
             - Logs processing stats and error rates
-    - [ ] Implement trending topics calculation
+    - [x] Implement trending topics calculation
         - Run the `calculate_trending_topics()` procedure
         - Add configurable thresholds for trending status
         - Implement cooldown period to prevent topic flapping
-    - [ ] Add connection discovery logic
+    - [x] Add connection discovery logic
         - Run the `update_topic_connections()` procedure
         - Filter connections by minimum strength threshold
         - Optimize to avoid excessive connections
-    - [ ] Set up scheduled job to run processing regularly
+    - [x] Set up scheduled job to run processing regularly
         - Create `scheduled-topics.ts` that runs every 5 minutes
         - Implement proper locking to prevent concurrent runs
         - Add ability to run manual processing with `--once` flag
-    - [ ] Add monitoring and error handling
+    - [x] Add monitoring and error handling
         - Implement detailed logging of processing steps
         - Track success/failure metrics
         - Add retry mechanism for failed operations

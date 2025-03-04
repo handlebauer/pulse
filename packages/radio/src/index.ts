@@ -34,3 +34,13 @@ export type {
 // Export radio types for consumers
 export type { RadioStation, RadioStationFilter } from './lib/radio/types'
 export { RadioStationCategory } from './lib/radio/types'
+
+// Export Topic Processing Engine
+export { TopicExtractor } from './lib/topics'
+export type { Topic } from './lib/topics'
+export {
+    normalizeTopic,
+    calculateTopicSimilarity,
+    findTopicRelationships,
+    identifyTopicHierarchy,
+} from './lib/topics'
