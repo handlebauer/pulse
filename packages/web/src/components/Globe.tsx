@@ -26,6 +26,26 @@ export function Globe({ stations }: GlobeProps) {
     useEffect(() => {
         if (!mapContainer.current) return
 
+        // Add custom CSS for the popup close button
+        const style = document.createElement('style')
+        style.textContent = `
+            .mapboxgl-popup-close-button {
+                font-size: 16px !important;
+                padding: 0 4px !important;
+                line-height: 1 !important;
+                color: #666 !important;
+                background: transparent !important;
+                cursor: pointer !important;
+                border: none !important;
+                transition: color 0.2s ease !important;
+            }
+            .mapboxgl-popup-close-button:hover {
+                color: #000 !important;
+                background: #fff !important;
+            }
+        `
+        document.head.appendChild(style)
+
         mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ''
 
         map.current = new mapboxgl.Map({
