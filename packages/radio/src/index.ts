@@ -4,6 +4,10 @@
  * A library for streaming, processing, and analyzing radio streams.
  */
 
+// Export scripts
+export { classifyStations } from '../scripts/radio/classify-stations'
+export { fetchStationsData } from '../scripts/radio/fetch-stations'
+
 // Export Stream Orchestrator and related types
 export {
     StreamOrchestrator,

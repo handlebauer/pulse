@@ -1,5 +1,5 @@
 {
-    "name": "radio-stream-library",
+    "name": "@pulse/radio",
     "version": "1.0.0",
     "description": "A powerful library for streaming, processing, and analyzing radio streams",
     "main": "dist/index.js",
