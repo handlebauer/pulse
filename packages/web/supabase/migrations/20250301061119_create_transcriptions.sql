@@ -10,7 +10,7 @@ create table if not exists public.transcriptions (
     duration interval generated always as ("endTime" - "startTime") stored,
     
     -- Transcription content
-    transcription jsonb not null default '[]'::jsonb, -- Array of {timecode, caption} objects
+    transcription jsonb not null default '[]'::jsonb, -- Array of {timecode, caption, isCommercial} objects
     
     -- Timestamps
     "createdAt" timestamp with time zone default now() not null,
@@ -57,7 +57,20 @@ create policy "Allow public read access to transcriptions"
     to anon, authenticated
     using (true);
 
+-- Enable real-time for transcriptions table
+-- Check if the publication exists, if not create it
+do $$
+begin
+    if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+        create publication supabase_realtime;
+    end if;
+end
+$$;
+
+-- Add the transcriptions table to the publication
+alter publication supabase_realtime add table public.transcriptions;
+
 -- Comments
 comment on table public.transcriptions is 'Stores radio stream transcriptions with their associated audio segments';
 comment on column public.transcriptions."audioData" is 'Base64 encoded audio segment data';
-comment on column public.transcriptions.transcription is 'JSON array of transcription objects with timecode and caption';
+comment on column public.transcriptions.transcription is 'JSON array of transcription objects with timecode, caption, and isCommercial flag';

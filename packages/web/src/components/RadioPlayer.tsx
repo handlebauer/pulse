@@ -4,6 +4,7 @@ import { Play, Pause, Volume2, VolumeX, MessageSquare } from 'lucide-react'
 import { useAudioPlayer } from '@/hooks/useAudioPlayer'
 import { useTranscriptions } from '@/hooks/useTranscriptions'
 import { useState, useRef, useEffect } from 'react'
+import { TranscriptionPanel } from '@/components/TranscriptionPanel'
 
 interface RadioPlayerProps {
     stationName: string
@@ -45,6 +46,7 @@ export function RadioPlayer({
     // Get transcription data for this station if available
     const transcriptionData = stationId ? transcriptionMap[stationId] : null
     const hasTranscription = !!transcriptionData?.recentText
+    const isCommercial = transcriptionData?.hasCommercials || false
 
     // Handle mouse down event to start dragging
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -184,28 +186,7 @@ export function RadioPlayer({
 
             {/* Transcription panel */}
             {showTranscription && transcriptionData && (
-                <div className="w-full mt-2 border-t border-white/20 pt-3">
-                    <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-xs font-medium text-white/70">
-                            LIVE TRANSCRIPTION
-                        </h4>
-                        <div className="flex gap-1">
-                            {transcriptionData.topics
-                                .slice(0, 3)
-                                .map((topic, i) => (
-                                    <span
-                                        key={i}
-                                        className="text-xs bg-white/10 text-white/90 px-2 py-0.5 rounded-full"
-                                    >
-                                        {topic}
-                                    </span>
-                                ))}
-                        </div>
-                    </div>
-                    <p className="text-sm text-white/90 max-h-24 overflow-y-auto">
-                        {transcriptionData.recentText}
-                    </p>
-                </div>
+                <TranscriptionPanel transcriptionData={transcriptionData} />
             )}
         </div>
     )

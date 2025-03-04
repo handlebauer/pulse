@@ -12,6 +12,7 @@ export interface TranscriptionData {
     topics: string[]
     recentText: string
     updatedAt: string
+    hasCommercials: boolean
 }
 
 export function useTranscriptions() {
@@ -37,7 +38,7 @@ export function useTranscriptions() {
                 return
             }
 
-            console.log('[data]', data)
+            console.log('[Initial Transcription Data]', data)
 
             // Process transcriptions into a map by stationId
             const newTranscriptionMap: Record<string, TranscriptionData> = {}
@@ -54,6 +55,11 @@ export function useTranscriptions() {
                 // Extract topics
                 const topics = extractTopics(recentText)
 
+                // Check if any segment is marked as a commercial
+                const hasCommercials = transcription.some(
+                    (t: any) => t.hasCommercials === true,
+                )
+
                 // Only add if we don't already have newer data for this station
                 if (
                     !newTranscriptionMap[item.stationId] ||
@@ -65,6 +71,7 @@ export function useTranscriptions() {
                         topics,
                         recentText,
                         updatedAt: item.updatedAt,
+                        hasCommercials,
                     }
                 }
             })
@@ -89,15 +96,26 @@ export function useTranscriptions() {
                     const newData = payload.new as any
                     if (!newData || !newData.transcription) return
 
-                    // Process the new transcription
-                    const recentText = Array.isArray(newData.transcription)
-                        ? newData.transcription
-                              .map((t: any) => t.caption)
-                              .join(' ')
-                        : ''
+                    console.log('[New Transcription Data]', newData)
 
+                    // Process the new transcription
+                    const transcription = newData.transcription
+                    if (!transcription || !Array.isArray(transcription)) return
+
+                    // Get the most recent text
+                    const recentText = transcription
+                        .map((t: any) => t.caption)
+                        .join(' ')
+
+                    // Extract topics
                     const topics = extractTopics(recentText)
 
+                    // Check if any segment is marked as a commercial
+                    const hasCommercials = transcription.some(
+                        (t: any) => t.hasCommercials === true,
+                    )
+
+                    // Update the transcription map
                     setTranscriptionMap((prev) => ({
                         ...prev,
                         [newData.stationId]: {
@@ -105,6 +123,7 @@ export function useTranscriptions() {
                             topics,
                             recentText,
                             updatedAt: newData.updatedAt,
+                            hasCommercials,
                         },
                     }))
                 },

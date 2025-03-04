@@ -34,6 +34,7 @@ export interface StreamConfig {
 export interface TranscriptionResult {
     timecode: string
     caption: string
+    isCommercial?: boolean
 }
 
 /**
