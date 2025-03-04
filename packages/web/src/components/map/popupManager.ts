@@ -5,10 +5,13 @@ export const createStationPopup = (
     station: Station,
     coordinates: [number, number],
 ): mapboxgl.Popup => {
-    return new mapboxgl.Popup()
+    return new mapboxgl.Popup({
+        maxWidth: 'none',
+        className: 'station-popup-container',
+    })
         .setLngLat(coordinates)
         .setHTML(
-            `<div class="text-lg font-medium py-1">${station.stationName}</div>`,
+            `<div class="text-lg font-medium station-popup">${station.stationName}</div>`,
         )
 }
 

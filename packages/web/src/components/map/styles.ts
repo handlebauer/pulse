@@ -1,19 +1,4 @@
-export const popupStyles = `
-    .mapboxgl-popup-close-button {
-        font-size: 16px !important;
-        padding: 0 4px !important;
-        line-height: 1 !important;
-        color: #666 !important;
-        background: transparent !important;
-        cursor: pointer !important;
-        border: none !important;
-        transition: color 0.2s ease !important;
-    }
-    .mapboxgl-popup-close-button:hover {
-        color: #000 !important;
-        background: #fff !important;
-    }
-`
+export const popupStyles = `.mapboxgl-popup-close-button { font-size: 16px !important; padding: 0 4px !important; line-height: 1 !important; color: #666 !important; background: transparent !important; cursor: pointer !important; border: none !important; transition: color 0.2s ease !important; } .mapboxgl-popup-close-button:hover { color: #000 !important; background: #fff !important; } .mapboxgl-popup-content { white-space: nowrap !important; max-width: none !important; width: auto !important; padding: 10px !important; } .station-popup { white-space: nowrap !important; } .station-popup-container { max-width: none !important; }`
 
 export const stationLayerStyle = {
     id: 'stations',
