@@ -136,7 +136,7 @@ async function main() {
     try {
         await startMultipleStations(
             stations.map((station) => ({
-                id: station.stationId,
+                id: station.id,
                 streamUrl: station.streamUrl,
             })),
         )
