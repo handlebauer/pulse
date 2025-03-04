@@ -106,11 +106,11 @@
     - [x] Add animations for topic appearance/disappearance
     - [x] Optimize rendering for smooth performance
 
-- [ ] Update Globe Component (in @pulse/web)
-    - [ ] Integrate new topic components
-    - [ ] Remove client-side topic extraction
-    - [ ] Ensure proper component lifecycle management
-    - [ ] Test with various station counts and data volumes
+- [x] Update Globe Component (in @pulse/web)
+    - [x] Integrate new topic components
+    - [x] Remove client-side topic extraction
+    - [x] Ensure proper component lifecycle management
+    - [x] Test with various station counts and data volumes
 
 ## Phase 3: Enhanced UI - Topic Connections
 

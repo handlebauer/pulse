@@ -14,9 +14,10 @@ import {
 import { setupMapEventHandlers } from './map/eventHandlers'
 import { popupStyles } from './map/styles'
 import { removePopup } from './map/popupManager'
-import { TopicLayer } from './map/TopicLayer'
 import { useTranscriptions } from '@/hooks/useTranscriptions'
 import { SubtitleTranscription } from './SubtitleTranscription'
+import { StationTopics } from './topics/StationTopics'
+import { TrendingTopics } from './topics/TrendingTopics'
 
 interface GlobeProps {
     stations: Station[]
@@ -28,6 +29,7 @@ export function Globe({ stations }: GlobeProps) {
     const [selectedStation, setSelectedStation] = useState<Station | null>(null)
     const { transcriptionMap, isLoading } = useTranscriptions()
     const [showTranscription, setShowTranscription] = useState(false)
+    const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
 
     useEffect(() => {
         if (!mapContainer.current) return
@@ -48,21 +50,29 @@ export function Globe({ stations }: GlobeProps) {
         // Setup map layers and handlers when loaded
         mapInstance.on('load', () => {
             addStationLayers(mapInstance, stations)
+
+            // Setup cluster click handlers
+            setupClusterClickHandlers(mapInstance)
+
+            // Setup zoom handler
+            setupZoomHandler(mapInstance)
+
+            // Setup map event handlers
             setupMapEventHandlers(
                 mapInstance,
                 stations,
                 currentRefs,
-                setSelectedStation,
+                (station: Station) => {
+                    setSelectedStation(station)
+                },
             )
-            setupClusterClickHandlers(mapInstance)
-            setupZoomHandler(mapInstance)
 
             // Fit map to the bounds of all stations
             if (stations.length > 0) {
                 // Create a bounds object
                 const bounds = new mapboxgl.LngLatBounds()
 
-                // Extend the bounds to include all station coordinates
+                // Extend the bounds to include all stations
                 stations.forEach((station) => {
                     bounds.extend([station.longitude, station.latitude])
                 })
@@ -71,12 +81,11 @@ export function Globe({ stations }: GlobeProps) {
                 mapInstance.fitBounds(bounds, {
                     padding: 50, // Add some padding around the bounds
                     maxZoom: 3, // Limit how far it can zoom in
-                    duration: 1000, // Animation duration in milliseconds
+                    duration: 1000, // Animation duration in ms
                 })
             }
         })
 
-        // Cleanup
         return () => {
             const { map, popup } = currentRefs
             removePopup(popup)
@@ -86,16 +95,34 @@ export function Globe({ stations }: GlobeProps) {
         }
     }, [stations])
 
+    // Add handler for topic clicks
+    const handleTopicClick = (topicId: string) => {
+        setSelectedTopicId(topicId)
+        // Additional logic for highlighting stations discussing this topic could be added here
+    }
+
     return (
         <>
             <div ref={mapContainer} className="w-full h-screen fixed inset-0" />
 
-            {/* Topic visualization layer */}
-            <TopicLayer
-                map={refs.current.map}
-                stations={stations}
-                transcriptionMap={transcriptionMap}
-            />
+            {/* Replace TopicLayer with StationTopics and TrendingTopics components */}
+            {/* Station Topics panel - only shown when a station is selected */}
+            {selectedStation && (
+                <div className="fixed top-4 left-4 max-w-xs w-full z-10">
+                    <StationTopics
+                        stationId={selectedStation.id}
+                        className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-4"
+                    />
+                </div>
+            )}
+
+            {/* Trending Topics panel - always visible */}
+            <div className="fixed top-4 right-4 max-w-xs w-full z-10">
+                <TrendingTopics
+                    className="shadow-lg"
+                    onTopicClick={handleTopicClick}
+                />
+            </div>
 
             {/* Subtitle-style transcription */}
             {selectedStation &&
