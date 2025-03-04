@@ -12,6 +12,7 @@
         "db:local:seed": "bun run scripts/db/seed.ts",
         "db:gen-types": "bunx supabase gen types typescript --local > src/lib/db/types.ts",
         "db:local:init": "bunx supabase db reset && bun run db:gen-types && bun run db:local:seed",
+        "db:local:push": "bunx supabase db push && bun run db:gen-types",
         "prepare": "husky"
     },
     "dependencies": {

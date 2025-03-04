@@ -4,22 +4,22 @@
 
 **Motivation:** The current approach of extracting topics in the browser using simple word frequency is inefficient and lacks depth. By moving topic extraction to the server and using AI-powered analysis, we can generate more meaningful topics, identify connections between stations, and track trends over time. This foundational phase creates the data infrastructure that powers all subsequent visualization features and ensures topics are processed once centrally rather than redundantly in each user's browser.
 
-- [ ] Database Schema Updates (in @pulse/web)
+- [x] Database Schema Updates (in @pulse/web)
 
-    - [ ] Create `topics` table for storing extracted topics
+    - [x] Create `topics` table for storing extracted topics
         - Fields: `id` (UUID), `name` (text), `normalized_name` (text), `is_trending` (boolean), `trend_score` (integer), timestamps
         - Add unique constraint on `normalized_name`
         - Create index on `is_trending` for fast trending topic queries
-    - [ ] Create `station_topics` table for station-topic relationships
+    - [x] Create `station_topics` table for station-topic relationships
         - Fields: `id` (UUID), `stationId` (UUID, FK), `topicId` (UUID, FK), `relevance_score` (float), `mention_count` (integer), `first_mentioned_at` (timestamp), `last_mentioned_at` (timestamp), timestamps
         - Add unique constraint on `(stationId, topicId)`
         - Create index on `last_mentioned_at` for recent mentions queries
-    - [ ] Create `topic_connections` table for station connections
+    - [x] Create `topic_connections` table for station connections
         - Fields: `id` (UUID), `topicId` (UUID, FK), `stationId1` (UUID, FK), `stationId2` (UUID, FK), `strength` (float), `active` (boolean), timestamps
         - Add constraint to ensure `stationId1 < stationId2` to prevent duplicate connections
         - Add unique constraint on `(topicId, stationId1, stationId2)`
         - Create index on `active` for filtering active connections
-    - [ ] Add stored procedures for trend and connection calculations
+    - [x] Add stored procedures for trend and connection calculations
         - Create `calculate_trending_topics()` procedure that updates trend scores based on:
             - Number of stations mentioning the topic
             - Total mention count
@@ -30,7 +30,7 @@
             - Calculates connection strength based on relevance scores
             - Creates/updates connections and marks them active
             - Cleans up inactive connections after a period
-    - [ ] Enable realtime subscriptions for new tables
+    - [x] Enable realtime subscriptions for new tables
         - Add all tables to the Supabase realtime publication
         - Test realtime events with Supabase client
 

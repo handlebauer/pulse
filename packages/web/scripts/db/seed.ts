@@ -6,6 +6,7 @@ import ora from 'ora'
 import figures from 'figures'
 import { createClient } from '@supabase/supabase-js'
 import { Tables } from '@/lib/db/types'
+import { seedTopicData } from './seedTopics'
 
 type RadioStation = Tables<'stations'>
 
@@ -151,6 +152,9 @@ async function main() {
 
         // Filter and seed only talk/news stations
         await seedDatabase(stations)
+
+        // Seed topic-related data
+        await seedTopicData()
 
         console.log(
             `\n${figures.tick} Database seeding completed successfully!\n`,
