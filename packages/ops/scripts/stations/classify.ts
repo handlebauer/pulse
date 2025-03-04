@@ -324,7 +324,7 @@ async function main() {
 }
 
 // Run the main function if this file is executed directly
-if (import.meta.url === Bun.main) {
+if (import.meta.path === Bun.main) {
     main().catch((error) => {
         logger.error('Unhandled error in main function', error)
         process.exit(1)
