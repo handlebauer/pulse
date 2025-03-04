@@ -11,8 +11,7 @@
         "format": "prettier --write .",
         "db:local:seed": "bun run scripts/db/seed.ts",
         "db:gen-types": "bunx supabase gen types typescript --local > src/lib/db/types.ts",
-        "db:local:init": "bunx supabase db reset && bun run db:gen-types && bun run db:local:seed",
-        "prepare": "husky"
+        "db:local:init": "bunx supabase db reset && bun run db:gen-types && bun run db:local:seed"
     },
     "dependencies": {
         "@radix-ui/react-slider": "^1.2.3",
@@ -40,7 +39,6 @@
         "eslint": "^9",
         "eslint-config-next": "15.2.0",
         "figures": "^6.1.0",
-        "husky": "^9.1.7",
         "lint-staged": "^15.4.3",
         "ora": "^8.2.0",
         "prettier": "3.5.3",

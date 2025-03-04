@@ -1,4 +1,4 @@
-# pulse-monorepo
+# pulse
 
 To install dependencies:
 

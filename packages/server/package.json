@@ -30,7 +30,6 @@
         "ffmpeg"
     ],
     "scripts": {
-        "prepare": "husky",
         "lint": "eslint \"src/**/*.ts\"",
         "format": "prettier --write \"src/**/*.ts\"",
         "db:local:seed": "bun run scripts/db/seed.ts",
@@ -42,7 +41,6 @@
         "@typescript-eslint/eslint-plugin": "^8.25.0",
         "@typescript-eslint/parser": "^8.25.0",
         "eslint": "^9.21.0",
-        "husky": "^9.1.7",
         "prettier": "3.5.2",
         "tsup": "^8.0.2",
         "typescript": "^5.3.3",
