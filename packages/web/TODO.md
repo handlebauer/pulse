@@ -91,12 +91,12 @@
 
 **Motivation:** With robust topic data now available from the server, we need intuitive ways to display this information to users. This phase focuses on creating UI components that show what topics are being discussed on each station and which topics are trending globally. By highlighting trending topics and providing real-time updates, users will gain immediate insight into the radio conversation landscape without having to manually listen to each station.
 
-- [ ] Topic Data Hooks (in @pulse/web)
+- [x] Topic Data Hooks (in @pulse/web)
 
-    - [ ] Create `useStationTopics` hook for station-specific topics
-    - [ ] Create `useTrendingTopics` hook for global trends
-    - [ ] Implement realtime updates for topic data
-    - [ ] Add error handling and loading states
+    - [x] Create `useStationTopics` hook for station-specific topics
+    - [x] Create `useTrendingTopics` hook for global trends
+    - [x] Implement realtime updates for topic data
+    - [x] Add error handling and loading states
 
 - [ ] Topic Visualization Components (in @pulse/web)
 
