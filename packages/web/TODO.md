@@ -100,11 +100,11 @@
 
 - [ ] Topic Visualization Components (in @pulse/web)
 
-    - [ ] Create `StationTopics` component to show current discussion topics
-    - [ ] Create `TrendingTopics` component for global trending topics
-    - [ ] Implement visual distinction for trending vs. regular topics
-    - [ ] Add animations for topic appearance/disappearance
-    - [ ] Optimize rendering for smooth performance
+    - [x] Create `StationTopics` component to show current discussion topics
+    - [x] Create `TrendingTopics` component for global trending topics
+    - [x] Implement visual distinction for trending vs. regular topics
+    - [x] Add animations for topic appearance/disappearance
+    - [x] Optimize rendering for smooth performance
 
 - [ ] Update Globe Component (in @pulse/web)
     - [ ] Integrate new topic components
