@@ -1,9 +1,11 @@
 #!/usr/bin/env bun
 /**
- * Topic-Enhanced Stream Orchestrator Service
+ * Radio Pipeline Service
  *
- * This service extends the stream orchestrator with real-time topic processing.
- * It listens for new transcriptions and processes topics as they come in.
+ * This comprehensive service manages the entire radio processing pipeline:
+ * 1. Streaming radio stations and saving audio segments
+ * 2. Transcribing audio to text
+ * 3. Processing topics from transcriptions in real-time
  */
 import { createOrchestrator } from '@pulse/radio'
 import { createSupabaseClient } from '@/lib/db'
@@ -12,13 +14,13 @@ import createLogger from '@/lib/logger'
 import { processTranscriptionTopics } from '@/lib/topics/processor'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-const logger = createLogger('TopicOrchestrator')
+const logger = createLogger('RadioPipeline')
 
 /**
- * Creates a topic-enhanced orchestrator service that processes
- * topics in real-time as new transcriptions are created
+ * Creates a comprehensive radio pipeline service that handles streaming,
+ * transcription, and real-time topic processing
  */
-export async function createTopicOrchestrator() {
+export async function createRadioPipeline() {
     // Create the base orchestrator instance
     const orchestrator = createOrchestrator({
         baseSegmentDir: defaultConfig.streamOrchestrator.baseSegmentDir,
@@ -161,17 +163,24 @@ export async function createTopicOrchestrator() {
 }
 
 /**
- * Main function to run the topic orchestrator service
+ * Main function to run the radio pipeline service
  */
 async function main() {
-    logger.info('Starting Topic Orchestrator Service')
+    logger.info('Starting Radio Pipeline Service')
 
     try {
         // Create the enhanced orchestrator
-        const topicOrchestrator = await createTopicOrchestrator()
+        const radioPipeline = await createRadioPipeline()
 
-        // Start real-time topic processing
-        topicOrchestrator.startTopicProcessing()
+        // Start real-time topic processing if enabled in config
+        if (defaultConfig.scheduling.realtimeTopics) {
+            radioPipeline.startTopicProcessing()
+            logger.info('Real-time topic processing enabled')
+        } else {
+            logger.info(
+                'Real-time topic processing disabled (using scheduled processing only)',
+            )
+        }
 
         // Get online stations from the database
         const supabase = createSupabaseClient()
@@ -199,10 +208,7 @@ async function main() {
 
             // Call startMultipleStations with both stationIds and stationData
             const stationIds = stations.map((station) => station.id)
-            await topicOrchestrator.startMultipleStations(
-                stationIds,
-                stationData,
-            )
+            await radioPipeline.startMultipleStations(stationIds, stationData)
             logger.success(
                 `Started ${stations.length} streams with real-time topic processing`,
             )
@@ -210,20 +216,20 @@ async function main() {
 
         // Handle signals for graceful shutdown
         const handleShutdown = () => {
-            logger.info('Shutting down Topic Orchestrator Service')
-            topicOrchestrator.stopTopicProcessing()
-            topicOrchestrator.stopAll()
-            logger.info('Topic Orchestrator Service stopped')
+            logger.info('Shutting down Radio Pipeline Service')
+            radioPipeline.stopTopicProcessing()
+            radioPipeline.stopAll()
+            logger.info('Radio Pipeline Service stopped')
             process.exit(0)
         }
 
         process.on('SIGINT', handleShutdown)
         process.on('SIGTERM', handleShutdown)
 
-        logger.info('Topic Orchestrator Service is running')
+        logger.info('Radio Pipeline Service is running')
         logger.info('Press Ctrl+C to stop')
     } catch (error) {
-        logger.error('Failed to start Topic Orchestrator Service', error)
+        logger.error('Failed to start Radio Pipeline Service', error)
         process.exit(1)
     }
 }
@@ -236,4 +242,4 @@ if (import.meta.path === Bun.main) {
     })
 }
 
-export default { createTopicOrchestrator }
+export default { createRadioPipeline }

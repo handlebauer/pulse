@@ -32,6 +32,7 @@ export interface OpsConfig {
     scheduling: {
         validateStreamsInterval: number // in minutes
         topicsInterval: number // in minutes
+        realtimeTopics: boolean
     }
 
     // Stream orchestrator configuration
@@ -75,6 +76,8 @@ export const defaultConfig: OpsConfig = {
         // For best results, this should be similar to how often new segments are
         // transcribed to keep topics as real-time as the transcriptions
         topicsInterval: parseInt(process.env.TOPICS_INTERVAL || '1', 10), // Default to 1 minute for near real-time updates
+        realtimeTopics:
+            process.env.ENABLE_REALTIME_TOPIC_PROCESSING !== 'false', // Default to true
     },
 
     streamOrchestrator: {

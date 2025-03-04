@@ -11,11 +11,11 @@
         "stations:filter": "bun run scripts/stations/filter.ts",
         "stations:geolocate": "bun run scripts/stations/geolocate.ts",
         "stations:pipeline": "bun run scripts/stations/index.ts",
-        "scheduled:validate": "bun run scripts/scheduled/validate-streams.ts",
-        "service:orchestrator": "bun run src/services/orchestrator.ts",
-        "service:topic-orchestrator": "bun run src/services/topic-orchestrator.ts",
         "topics:process": "bun run scripts/topics/process-topics.ts",
-        "scheduled:topics": "bun run scripts/scheduled/process-topics.ts"
+        "scheduled:validate": "bun run scripts/scheduled/validate-streams.ts",
+        "scheduled:topics": "bun run scripts/scheduled/process-topics.ts",
+        "service:orchestrator": "bun run src/services/orchestrator.ts",
+        "service:radio-pipeline": "bun run src/services/radio-pipeline.ts"
     },
     "dependencies": {
         "@google/generative-ai": "^0.2.1",
