@@ -1,5 +1,5 @@
 {
-    "name": "pulse-monorepo",
+    "name": "pulse",
     "module": "index.ts",
     "type": "module",
     "private": true,
