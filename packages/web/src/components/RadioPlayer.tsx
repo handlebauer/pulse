@@ -3,7 +3,7 @@ import { Slider } from '@/components/ui/slider'
 import { Play, Pause, Volume2, VolumeX, MessageSquare } from 'lucide-react'
 import { useAudioPlayer } from '@/hooks/useAudioPlayer'
 import { useTranscriptions } from '@/hooks/useTranscriptions'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 interface RadioPlayerProps {
     stationName: string
@@ -28,12 +28,103 @@ export function RadioPlayer({
     const { transcriptionMap } = useTranscriptions()
     const [showTranscription, setShowTranscription] = useState(false)
 
+    // State for draggable functionality
+    const [position, setPosition] = useState<{ x: number; y: number }>({
+        x: 50,
+        y: 92,
+    }) // Default position (percentage)
+    const [isDragging, setIsDragging] = useState(false)
+    const playerRef = useRef<HTMLDivElement>(null)
+    const dragStartRef = useRef<{
+        mouseX: number
+        mouseY: number
+        elemX: number
+        elemY: number
+    } | null>(null)
+
     // Get transcription data for this station if available
     const transcriptionData = stationId ? transcriptionMap[stationId] : null
     const hasTranscription = !!transcriptionData?.recentText
 
+    // Handle mouse down event to start dragging
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Don't start dragging if the click is on an interactive element
+        if (
+            e.target instanceof Element &&
+            (e.target.closest('button') ||
+                e.target.closest('.slider') ||
+                e.target.tagName === 'INPUT')
+        ) {
+            return
+        }
+
+        e.preventDefault()
+
+        // Store the initial mouse position and element position
+        dragStartRef.current = {
+            mouseX: e.clientX,
+            mouseY: e.clientY,
+            elemX: position.x,
+            elemY: position.y,
+        }
+
+        setIsDragging(true)
+    }
+
+    // Handle mouse move event during dragging
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isDragging || !dragStartRef.current) return
+
+        // Calculate the mouse movement delta
+        const deltaX = e.clientX - dragStartRef.current.mouseX
+        const deltaY = e.clientY - dragStartRef.current.mouseY
+
+        // Convert delta to percentage of viewport
+        const deltaXPercent = (deltaX / window.innerWidth) * 100
+        const deltaYPercent = (deltaY / window.innerHeight) * 100
+
+        // Calculate new position based on starting position plus delta
+        const newX = dragStartRef.current.elemX + deltaXPercent
+        const newY = dragStartRef.current.elemY + deltaYPercent
+
+        // Ensure the player stays within the viewport
+        const boundedX = Math.max(0, Math.min(newX, 100))
+        const boundedY = Math.max(0, Math.min(newY, 100))
+
+        setPosition({ x: boundedX, y: boundedY })
+    }
+
+    // Handle mouse up event to stop dragging
+    const handleMouseUp = () => {
+        setIsDragging(false)
+        dragStartRef.current = null
+    }
+
+    // Add and remove event listeners
+    useEffect(() => {
+        if (isDragging) {
+            window.addEventListener('mousemove', handleMouseMove)
+            window.addEventListener('mouseup', handleMouseUp)
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove)
+            window.removeEventListener('mouseup', handleMouseUp)
+        }
+    }, [isDragging])
+
     return (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/80 px-6 pr-10 pt-4 pb-3 border border-zinc-800 backdrop-blur-sm p-4 rounded-lg shadow-lg flex flex-col items-center gap-4 z-50 w-auto max-w-md">
+        <div
+            ref={playerRef}
+            className="fixed bg-black/80 px-6 pr-10 pt-5 pb-4 border border-zinc-800 backdrop-blur-sm p-4 rounded-lg shadow-lg flex flex-col items-center gap-4 z-50 w-auto max-w-md"
+            style={{
+                left: `${position.x}%`,
+                top: `${position.y}%`,
+                transform: 'translate(-50%, -50%)',
+                cursor: isDragging ? 'grabbing' : 'default',
+            }}
+            onMouseDown={handleMouseDown}
+        >
             <div className="flex flex-col w-full">
                 <span className="text-sm font-medium text-white mb-2 truncate pl-4">
                     {stationName}
@@ -44,7 +135,7 @@ export function RadioPlayer({
                         variant="ghost"
                         size="icon"
                         onClick={togglePlayPause}
-                        className="text-white pl-1 hover:bg-white/20 hover:text-white cursor-pointer flex items-center justify-center h-10 w-10"
+                        className="text-white pl-1 hover:bg-transparent hover:text-white cursor-pointer flex items-center justify-center h-10 w-10"
                     >
                         {isPlaying ? (
                             <Pause className="h-6 w-6" />
@@ -58,7 +149,7 @@ export function RadioPlayer({
                             variant="ghost"
                             size="icon"
                             onClick={toggleMute}
-                            className="text-white hover:bg-white/20 hover:text-white cursor-pointer h-10 w-10 flex items-center justify-center"
+                            className="text-white hover:bg-transparent hover:text-white cursor-pointer h-10 w-10 flex items-center justify-center"
                         >
                             {isMuted ? (
                                 <VolumeX className="h-5 w-5" />
