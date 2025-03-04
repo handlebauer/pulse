@@ -8,6 +8,7 @@ import meow from 'meow'
 import { createClient } from '@supabase/supabase-js'
 import { Tables } from '@/lib/db/types'
 import { seedTopicData } from './seedTopics'
+import { seedTranscriptionData } from './seedTranscripts'
 
 type RadioStation = Tables<'stations'>
 
@@ -206,6 +207,9 @@ async function seedFull() {
 
         // Seed topic-related data
         await seedTopicData()
+
+        // Seed transcription data
+        await seedTranscriptionData()
 
         console.log(
             `\n${figures.tick} Full database seeding completed successfully!\n`,

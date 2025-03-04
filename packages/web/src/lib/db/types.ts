@@ -3414,6 +3414,15 @@ export type Database = {
                 }
                 Returns: string
             }
+            upsert_station_topic: {
+                Args: {
+                    p_station_id: string
+                    p_topic_id: string
+                    p_relevance_score: number
+                    p_last_mentioned_at: string
+                }
+                Returns: undefined
+            }
         }
         Enums: {
             [_ in never]: never

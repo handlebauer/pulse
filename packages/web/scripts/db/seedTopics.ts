@@ -145,7 +145,7 @@ async function seedStationTopics(topics: Topic[]) {
         >[] = []
 
         // Assign topics to stations (simplified approach)
-        stations.forEach((station, index) => {
+        stations.forEach((station) => {
             // Assign 2-4 random topics to each station
             const numTopics = 2 + Math.floor(Math.random() * 3) // 2 to 4 topics
             const assignedTopicIndexes: number[] = []
