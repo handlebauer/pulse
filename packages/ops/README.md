@@ -18,7 +18,7 @@ bun install
 
 ### Station Data Pipeline
 
-The station data pipeline consists of three steps:
+The station data pipeline consists of four steps:
 
 1. **Fetch**: Fetch radio stations from the Radio Browser API
 
@@ -35,23 +35,33 @@ The station data pipeline consists of three steps:
     - Input: Reads from `packages/web/scripts/db/stations.json`
     - Output: Updates the same file with stream status (isOnline, updatedAt)
 
+4. **Filter**: Create specialized subsets of stations
+
+    - Input: Reads from `packages/web/scripts/db/stations.json`
+    - Output: Writes to `packages/web/scripts/db/filtered-stations.json`
+    - Current filters: Talk and news stations only
+
 You can run the full pipeline or individual steps:
 
 ```bash
-# Run the full pipeline (fetch → classify → validate)
+# Run the full pipeline (fetch → classify → validate → filter)
 bun run stations:pipeline
 
 # Run individual steps
 bun run stations:fetch     # Only fetch stations
 bun run stations:classify  # Only classify stations
 bun run stations:validate  # Only validate streams
+bun run stations:filter    # Only filter stations
 
 # Run the pipeline with specific steps
 bun run stations:pipeline fetch             # Only fetch
 bun run stations:pipeline classify          # Only classify
 bun run stations:pipeline validate          # Only validate
+bun run stations:pipeline filter            # Only filter
 bun run stations:pipeline fetch-classify    # Fetch then classify
 bun run stations:pipeline classify-validate # Classify then validate
+bun run stations:pipeline validate-filter   # Validate then filter
+bun run stations:pipeline no-filter         # Run all steps except filtering
 ```
 
 ### Scheduled Validation
@@ -88,7 +98,7 @@ bun run service:orchestrator
 ## Data Flow
 
 ```
-Radio Browser API → fetch.ts → stations.json → classify.ts → stations.json → validate.ts → stations.json
+Radio Browser API → fetch.ts → stations.json → classify.ts → stations.json → validate.ts → stations.json → filter.ts → filtered-stations.json
                                                                                       ↓
                                                                             scheduled-validate.ts
                                                                                       ↓

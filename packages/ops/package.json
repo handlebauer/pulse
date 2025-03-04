@@ -8,6 +8,7 @@
         "stations:fetch": "bun run scripts/stations/fetch.ts",
         "stations:classify": "bun run scripts/stations/classify.ts",
         "stations:validate": "bun run scripts/stations/validate.ts",
+        "stations:filter": "bun run scripts/stations/filter.ts",
         "stations:pipeline": "bun run scripts/stations/index.ts",
         "scheduled:validate": "bun run scripts/scheduled/validate-streams.ts",
         "service:orchestrator": "bun run src/services/orchestrator.ts"

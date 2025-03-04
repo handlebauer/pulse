@@ -1,5 +1,5 @@
 {
-    "name": "pulse",
+    "name": "@pulse/web",
     "version": "0.1.0",
     "private": true,
     "type": "module",
@@ -11,9 +11,11 @@
         "format": "prettier --write .",
         "db:local:seed": "bun run scripts/db/seed.ts",
         "db:gen-types": "bunx supabase gen types typescript --local > src/lib/db/types.ts",
-        "db:local:init": "bunx supabase db reset && bun run db:gen-types && bun run db:local:seed"
+        "db:local:init": "bunx supabase db reset && bun run db:gen-types && bun run db:local:seed",
+        "prepare": "husky"
     },
     "dependencies": {
+        "@pulse/radio": "workspace:*",
         "@radix-ui/react-slider": "^1.2.3",
         "@radix-ui/react-slot": "^1.1.2",
         "@supabase/ssr": "^0.5.2",
