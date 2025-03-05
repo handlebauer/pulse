@@ -204,7 +204,7 @@ export function Globe({ stations }: GlobeProps) {
 
             {/* Station Topics panel - only shown when a station is selected */}
             {selectedStation && (
-                <div className="fixed top-6 left-6 max-w-xs w-full z-10 transition-all duration-500 animate-in fade-in slide-in-from-left-8">
+                <div className="fixed top-6 left-6 max-w-xs w-full z-10 transition-all duration-150 animate-in fade-in">
                     <StationTopics
                         stationId={selectedStation.id}
                         className="shadow-xl"

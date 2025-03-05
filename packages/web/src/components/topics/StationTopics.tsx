@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useStationTopics, StationTopicData } from '@/hooks/useStationTopics'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Radio } from 'lucide-react'
 
@@ -32,31 +31,12 @@ export function StationTopics({
         }
     }, [topics, maxTopics, isLoading])
 
-    if (isLoading && !visibleTopics.length) {
+    if (isLoading || !visibleTopics.length) {
         return (
-            <Card
-                className={cn(
-                    'backdrop-blur-md bg-black/30 border-gray-700/50 text-white shadow-xl',
-                    className,
-                )}
-            >
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center">
-                        <Radio className="w-4 h-4 mr-2 text-indigo-500/90" />
-                        <Skeleton className="h-4 w-32 bg-gray-700/50" />
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                            <Skeleton
-                                key={i}
-                                className="h-6 w-20 bg-gray-700/50"
-                            />
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="text-sm text-gray-400 p-2 italic flex items-center justify-center select-none">
+                <Radio className="w-4 h-4 mr-2 text-gray-400" />
+                No topics available for this station
+            </div>
         )
     }
 
@@ -72,24 +52,6 @@ export function StationTopics({
                     <div className="text-sm text-red-400 flex items-center">
                         <Radio className="w-4 h-4 mr-2 text-red-500" />
                         Failed to load topics
-                    </div>
-                </CardContent>
-            </Card>
-        )
-    }
-
-    if (!visibleTopics.length) {
-        return (
-            <Card
-                className={cn(
-                    'backdrop-blur-md bg-black/30 border-gray-700/50 text-white shadow-xl',
-                    className,
-                )}
-            >
-                <CardContent className="p-4">
-                    <div className="text-sm text-gray-400 italic flex items-center">
-                        <Radio className="w-4 h-4 mr-2 text-gray-400" />
-                        No topics available for this station
                     </div>
                 </CardContent>
             </Card>
