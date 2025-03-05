@@ -18,13 +18,13 @@
         "service:radio-pipeline": "bun run src/services/radio-pipeline.ts"
     },
     "dependencies": {
-        "@google/generative-ai": "^0.2.1",
+        "@google/generative-ai": "^0.22.0",
         "@pulse/radio": "workspace:*",
         "cheerio": "^1.0.0-rc.12",
         "cron": "^4.1.0",
-        "dedent": "^1.5.1",
+        "dedent": "^1.5.3",
         "figures": "^5.0.0",
-        "ora": "^8.0.1"
+        "ora": "^8.2.0"
     },
     "devDependencies": {
         "@types/bun": "latest",

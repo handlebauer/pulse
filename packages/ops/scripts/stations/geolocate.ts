@@ -16,6 +16,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import createLogger from '@/lib/logger'
 import { readFilteredStations, writeFilteredStations } from '@/lib/db'
 import { defaultConfig } from '@/config'
+import dedent from 'dedent'
 
 const logger = createLogger('GeolocateStations')
 
@@ -120,19 +121,27 @@ async function extractLocationWithLLM(
         )
         const model = genAI.getGenerativeModel({
             model: defaultConfig.transcription.google.model,
+            generationConfig: { responseMimeType: 'application/json' },
         })
 
-        const prompt = `
-        I need to determine the location (city and state/province/region) of a radio station.
-        
-        Station Name: ${stationName}
-        
-        Here is text from their website:
-        ${websiteContent.substring(0, 5000)}
-        
-        Based on this information, what is the most likely city and state/province/region where this station is located?
-        If you can determine the location, respond ONLY with the location in the format "City, State/Province, Country".
-        If you cannot determine the location with confidence, respond with "UNKNOWN".
+        const prompt = dedent`
+            I need to determine the location (city and state/province/region) of a radio station.
+            
+            Station Name: ${stationName}
+            
+            Here is text from their website:
+            ${websiteContent.substring(0, 5000)}
+            
+            Based on BOTH properties (the station name and the website content), what is the most likely city and state/province/region where this station is located?
+            If you can determine the location, respond ONLY with the location in the format:
+            
+            {
+                "city": "City",
+                "state": "State/Province",
+                "country": "Country"
+            }
+            
+            For any of the location properties that you cannot determine with confidence, use "UNKNOWN" for the value.
         `
 
         logger.debug(
@@ -141,14 +150,47 @@ async function extractLocationWithLLM(
         const result = await model.generateContent(prompt)
         const response = result.response.text().trim()
 
-        if (response === 'UNKNOWN') {
+        // Parse the JSON response
+        let locationData: { city: string; state: string; country: string }
+        try {
+            locationData = JSON.parse(response)
+        } catch (parseError) {
+            logger.error(
+                `Failed to parse LLM response as JSON: ${response}`,
+                parseError,
+            )
+            return null
+        }
+
+        // Check if any valid location data was found
+        if (
+            locationData.city === 'UNKNOWN' &&
+            locationData.state === 'UNKNOWN' &&
+            locationData.country === 'UNKNOWN'
+        ) {
             logger.debug(`LLM could not determine location for ${stationName}`)
             return null
-        } else {
+        }
+
+        // Format location string with the available data
+        const locationParts: string[] = []
+        if (locationData.city !== 'UNKNOWN')
+            locationParts.push(locationData.city)
+        if (locationData.state !== 'UNKNOWN')
+            locationParts.push(locationData.state)
+        if (locationData.country !== 'UNKNOWN')
+            locationParts.push(locationData.country)
+
+        // If we have any valid location parts, return them as a comma-separated string
+        if (locationParts.length > 0) {
+            const locationString = locationParts.join(', ')
             logger.debug(
-                `LLM extracted location for ${stationName}: "${response}"`,
+                `LLM extracted location for ${stationName}: "${locationString}"`,
             )
-            return response
+            return locationString
+        } else {
+            logger.debug(`No valid location parts found for ${stationName}`)
+            return null
         }
     } catch (error) {
         logger.error('Error using LLM to extract location:', error)
@@ -199,6 +241,105 @@ async function geocodeLocation(
 }
 
 /**
+ * Use Google Gemini to extract location information from station metadata
+ */
+async function extractLocationFromMetadata(
+    station: RadioStation,
+): Promise<string | null> {
+    try {
+        const genAI = new GoogleGenerativeAI(
+            defaultConfig.transcription.google.apiKey,
+        )
+        const model = genAI.getGenerativeModel({
+            model: defaultConfig.transcription.google.model,
+            generationConfig: { responseMimeType: 'application/json' },
+        })
+
+        const prompt = dedent`
+            I need to determine the location (city and state/province/region) of a radio station based on its metadata.
+            
+            Station Name: ${station.stationName}
+            Website URL: ${station.websiteUrl}
+            Country: ${station.country}
+            Country Code: ${station.countryCode}
+            State: ${station.state}
+            
+            Based on this metadata, what is the most likely city and state/province/region where this station is located?
+            If you can determine the location, respond ONLY with the location in the format:
+            
+            {
+                "city": "City",
+                "state": "State/Province",
+                "country": "Country"
+            }
+            
+            For any of the location properties that you cannot determine with confidence, use "UNKNOWN" for the value.
+            The state/province field must be determined for a successful location extraction.
+        `
+
+        logger.debug(
+            `Sending station metadata to LLM for location extraction: ${station.stationName}`,
+        )
+        const result = await model.generateContent(prompt)
+        const response = result.response.text().trim()
+
+        // Parse the JSON response
+        let locationData: { city: string; state: string; country: string }
+        try {
+            locationData = JSON.parse(response)
+        } catch (parseError) {
+            logger.error(
+                `Failed to parse LLM response as JSON: ${response}`,
+                parseError,
+            )
+            return null
+        }
+
+        // Check if any valid location data was found
+        // Required: state must be known
+        if (
+            locationData.state === 'UNKNOWN' ||
+            (locationData.city === 'UNKNOWN' &&
+                locationData.country === 'UNKNOWN')
+        ) {
+            logger.debug(
+                `LLM could not determine sufficient location from metadata for ${station.stationName} (state is required)`,
+            )
+            return null
+        }
+
+        // Format location string with the available data
+        const locationParts: string[] = []
+        if (locationData.city !== 'UNKNOWN')
+            locationParts.push(locationData.city)
+        if (locationData.state !== 'UNKNOWN')
+            locationParts.push(locationData.state)
+        if (locationData.country !== 'UNKNOWN')
+            locationParts.push(locationData.country)
+
+        // If we have any valid location parts, return them as a comma-separated string
+        if (locationParts.length > 0) {
+            const locationString = locationParts.join(', ')
+            logger.debug(
+                `LLM extracted location from metadata for ${station.stationName}: "${locationString}"`,
+            )
+            return locationString
+        } else {
+            logger.debug(
+                `No valid location parts found from metadata for ${station.stationName}`,
+            )
+            return null
+        }
+    } catch (error) {
+        logger.error(
+            'Error using LLM to extract location from metadata:',
+            error,
+        )
+        return null
+    }
+}
+
+/**
  * Process a single station to determine its geolocation
  */
 async function processStation(station: RadioStation): Promise<RadioStation> {
@@ -219,34 +360,52 @@ async function processStation(station: RadioStation): Promise<RadioStation> {
         return station
     }
 
-    // Step 1: Scrape the website
-    logger.info(`STEP 1: Scraping website: ${station.websiteUrl}`)
-    const websiteContent = await scrapeWebsite(station.websiteUrl)
-    if (!websiteContent) {
-        logger.warn(
-            `Could not scrape website for station ${station.stationName}`,
-        )
-        return station
-    }
-
-    // Step 2: Extract location with LLM
+    // New Step 1: Try to extract location from station metadata first
     logger.info(
-        `STEP 2: Extracting location with LLM for ${station.stationName}`,
+        `STEP 1: Attempting to extract location from station metadata for ${station.stationName}`,
     )
-    const locationString = await extractLocationWithLLM(
-        station.stationName,
-        websiteContent,
-    )
-    if (!locationString) {
-        logger.warn(
-            `Could not extract location for station ${station.stationName}`,
-        )
-        return station
-    }
+    let locationString = await extractLocationFromMetadata(station)
 
-    logger.info(
-        `Extracted location for ${station.stationName}: ${locationString}`,
-    )
+    // If metadata extraction was successful, proceed to geocoding
+    if (locationString) {
+        logger.info(
+            `Extracted location from metadata for ${station.stationName}: ${locationString}`,
+        )
+    } else {
+        // If metadata extraction failed, fall back to original method
+        logger.info(
+            `Could not extract location from metadata, falling back to website scraping`,
+        )
+
+        // Original Step 1: Scrape the website
+        logger.info(`STEP 1b: Scraping website: ${station.websiteUrl}`)
+        const websiteContent = await scrapeWebsite(station.websiteUrl)
+        if (!websiteContent) {
+            logger.warn(
+                `Could not scrape website for station ${station.stationName}`,
+            )
+            return station
+        }
+
+        // Original Step 2: Extract location with LLM from website content
+        logger.info(
+            `STEP 2: Extracting location with LLM from website content for ${station.stationName}`,
+        )
+        locationString = await extractLocationWithLLM(
+            station.stationName,
+            websiteContent,
+        )
+        if (!locationString) {
+            logger.warn(
+                `Could not extract location for station ${station.stationName}`,
+            )
+            return station
+        }
+
+        logger.info(
+            `Extracted location from website content for ${station.stationName}: ${locationString}`,
+        )
+    }
 
     // Step 3: Geocode the location
     logger.info(`STEP 3: Geocoding location: ${locationString}`)
