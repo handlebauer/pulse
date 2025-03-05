@@ -54,9 +54,9 @@ export interface RadioBrowserConfig {
  */
 export interface TranscriptionConfig {
     /**
-     * Google API key for transcription services
+     * The AI provider to use for transcription: "openai" or "google"
      */
-    googleApiKey: string
+    provider: 'openai' | 'google'
 
     /**
      * Whether to enable transcription
@@ -64,9 +64,78 @@ export interface TranscriptionConfig {
     enabled?: boolean
 
     /**
-     * Model to use for transcription
+     * Google AI configuration
      */
-    model?: string
+    google: {
+        /**
+         * Google API key for transcription services
+         */
+        apiKey: string
+
+        /**
+         * Google model to use for transcription
+         * Default: gemini-2.0-flash
+         */
+        model: string
+    }
+
+    /**
+     * OpenAI configuration
+     */
+    openai: {
+        /**
+         * OpenAI API key
+         */
+        apiKey: string
+
+        /**
+         * OpenAI model to use for transcription
+         * Default: whisper-1
+         */
+        model: string
+    }
+}
+
+/**
+ * Topic extraction configuration with support for multiple AI providers
+ */
+export interface TopicExtractionConfig {
+    /**
+     * The AI provider to use for topic extraction: "openai" or "google"
+     */
+    provider: 'openai' | 'google'
+
+    /**
+     * OpenAI configuration
+     */
+    openai: {
+        /**
+         * OpenAI API key
+         */
+        apiKey: string
+
+        /**
+         * OpenAI model to use for topic extraction
+         * Default: gpt-4o-mini
+         */
+        model: string
+    }
+
+    /**
+     * Google AI configuration
+     */
+    google: {
+        /**
+         * Google API key for topic extraction
+         */
+        apiKey: string
+
+        /**
+         * Google AI model to use for topic extraction
+         * Default: gemini-2.0-flash
+         */
+        model: string
+    }
 }
 
 /**
@@ -147,6 +216,11 @@ export interface RadioLibraryConfig {
      * Transcription configuration
      */
     transcription?: TranscriptionConfig
+
+    /**
+     * Topic extraction configuration
+     */
+    topicExtraction?: TopicExtractionConfig
 
     /**
      * Stream orchestrator configuration

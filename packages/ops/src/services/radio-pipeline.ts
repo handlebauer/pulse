@@ -13,6 +13,7 @@ import { defaultConfig } from '@/config'
 import createLogger from '@/lib/logger'
 import { processTranscriptionTopics } from '@/lib/topics/processor'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { OpsConfig } from '@/config'
 
 const logger = createLogger('RadioPipeline')
 
@@ -20,22 +21,17 @@ const logger = createLogger('RadioPipeline')
  * Creates a comprehensive radio pipeline service that handles streaming,
  * transcription, and real-time topic processing
  */
-export async function createRadioPipeline() {
+export async function createRadioPipeline(config: OpsConfig = defaultConfig) {
     // Create the base orchestrator instance
     const orchestrator = createOrchestrator({
-        baseSegmentDir: defaultConfig.streamOrchestrator.baseSegmentDir,
-        defaultSegmentLength:
-            defaultConfig.streamOrchestrator.defaultSegmentLength,
-        defaultKeepSegments:
-            defaultConfig.streamOrchestrator.defaultKeepSegments,
+        baseSegmentDir: config.streamOrchestrator.baseSegmentDir,
+        defaultSegmentLength: config.streamOrchestrator.defaultSegmentLength,
+        defaultKeepSegments: config.streamOrchestrator.defaultKeepSegments,
         database: {
-            url: defaultConfig.database.url,
-            serviceRoleKey: defaultConfig.database.serviceRoleKey,
+            url: config.database.url,
+            serviceRoleKey: config.database.serviceRoleKey,
         },
-        transcription: {
-            googleApiKey: defaultConfig.transcription.googleApiKey,
-            model: defaultConfig.transcription.model,
-        },
+        transcription: config.transcription,
     })
 
     // Create Supabase client for listening to new transcriptions
@@ -89,6 +85,8 @@ export async function createRadioPipeline() {
                             transcriptionId,
                             shouldUpdateTrends,
                             shouldUpdateConnections,
+                            config.database,
+                            config.topicExtraction,
                         )
 
                         logger.info(
@@ -169,8 +167,8 @@ async function main() {
     logger.info('Starting Radio Pipeline Service')
 
     try {
-        // Create the enhanced orchestrator
-        const radioPipeline = await createRadioPipeline()
+        // Create the enhanced orchestrator with the default configuration
+        const radioPipeline = await createRadioPipeline(defaultConfig)
 
         // Start real-time topic processing if enabled in config
         if (defaultConfig.scheduling.realtimeTopics) {

@@ -1,7 +1,6 @@
 import dedent from 'dedent'
-import { createGenerativeAIClient } from '@/utils/ai'
-import type { TranscriptionConfig } from '@/lib/config/types'
-import type { TranscriptionResult } from '@/lib/stream/stream-manager'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { type TranscriptionResult } from '@/lib/stream/stream-manager'
 
 const DEFAULT_MODEL = 'gemini-2.0-flash'
 const DEFAULT_PROMPT = dedent`
@@ -23,16 +22,24 @@ const DEFAULT_PROMPT = dedent`
 `
 
 /**
- * Creates a transcription service
+ * Creates a Google-based transcription service
  *
- * @param config Transcription configuration
+ * @param apiKey Google API key
+ * @param model Google model to use
  * @returns Transcription service
  */
-export function createTranscriptionService(config: TranscriptionConfig) {
-    const googleAI = createGenerativeAIClient(config)
+export function createGoogleTranscriptionService(
+    apiKey: string,
+    model: string = DEFAULT_MODEL,
+) {
+    if (!apiKey) {
+        throw new Error('Google API key is required for transcription')
+    }
 
-    const model = googleAI.getGenerativeModel({
-        model: config.model || DEFAULT_MODEL,
+    const googleAI = new GoogleGenerativeAI(apiKey)
+
+    const aiModel = googleAI.getGenerativeModel({
+        model: model || DEFAULT_MODEL,
         generationConfig: {
             responseMimeType: 'application/json',
         },
@@ -47,7 +54,7 @@ export function createTranscriptionService(config: TranscriptionConfig) {
         audioFilePath: string,
     ): Promise<TranscriptionResult[]> {
         // Generate content using a prompt and the metadata of the uploaded file.
-        const result = await model.generateContent([
+        const result = await aiModel.generateContent([
             {
                 inlineData: {
                     mimeType: 'audio/mp3',
@@ -68,7 +75,10 @@ export function createTranscriptionService(config: TranscriptionConfig) {
                 parsed = JSON.parse(text)
             } catch {
                 // Gemini failed to correctly structure output
-                console.log('[Transcription] Failed to parse result:', text)
+                console.log(
+                    '[Google Transcription] Failed to parse result:',
+                    text,
+                )
             }
 
             // Ensure the result matches our expected format
@@ -80,11 +90,14 @@ export function createTranscriptionService(config: TranscriptionConfig) {
                 }))
             }
 
-            console.error('[Transcription] Unexpected result format', parsed)
+            console.error(
+                '[Google Transcription] Unexpected result format',
+                parsed,
+            )
             return []
         } catch (error) {
             console.error(
-                '[Transcription] Error parsing transcription result:',
+                '[Google Transcription] Error parsing transcription result:',
                 error,
             )
             return []

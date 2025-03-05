@@ -2,7 +2,7 @@ import { StreamManager, createStream } from './stream-manager'
 import type { StreamConfig, StreamManagerDependencies } from './stream-manager'
 import type { DatabaseConfig, TranscriptionConfig } from '../config/types'
 import { createSupabaseClient } from '@/lib/db/client'
-import { createTranscriptionService } from '@/lib/transcribe/gemini'
+import { createTranscriptionService } from '@/lib/transcribe'
 import path from 'path'
 
 /**
@@ -73,16 +73,23 @@ export class StreamOrchestrator {
 
         // Initialize transcription service if configured
         if (config.transcription) {
-            const { model, googleApiKey, enabled } = config.transcription
-            // Enable transcription if both model and API key are present, unless explicitly disabled
+            // Skip initialization if transcription is explicitly disabled
             const shouldEnableTranscription =
-                model && googleApiKey && enabled !== false
+                config.transcription.enabled !== false
 
             if (shouldEnableTranscription) {
-                const transcriptionService = createTranscriptionService(
-                    config.transcription,
-                )
-                this.dependencies.transcriptionService = transcriptionService
+                try {
+                    const transcriptionService = createTranscriptionService(
+                        config.transcription,
+                    )
+                    this.dependencies.transcriptionService =
+                        transcriptionService
+                } catch (error) {
+                    console.error(
+                        'Failed to initialize transcription service:',
+                        error,
+                    )
+                }
             }
         }
     }

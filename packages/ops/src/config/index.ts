@@ -17,8 +17,28 @@ export interface OpsConfig {
 
     // Transcription configuration
     transcription: {
-        googleApiKey: string
-        model: string
+        provider: 'openai' | 'google'
+        google: {
+            apiKey: string
+            model: string
+        }
+        openai: {
+            apiKey: string
+            model: string
+        }
+    }
+
+    // Topic extraction configuration
+    topicExtraction: {
+        provider: 'openai' | 'google'
+        openai: {
+            apiKey: string
+            model: string
+        }
+        google: {
+            apiKey: string
+            model: string
+        }
     }
 
     // Paths configuration
@@ -51,8 +71,34 @@ export const defaultConfig: OpsConfig = {
     },
 
     transcription: {
-        googleApiKey: process.env.TRANSCRIPTION_GOOGLE_API_KEY || '',
-        model: process.env.TRANSCRIPTION_GOOGLE_LLM_MODEL || 'gemini-2.0-flash',
+        provider: (process.env.TRANSCRIPTION_PROVIDER || 'openai') as
+            | 'openai'
+            | 'google',
+        google: {
+            apiKey: process.env.TRANSCRIPTION_GOOGLE_API_KEY || '',
+            model:
+                process.env.TRANSCRIPTION_GOOGLE_LLM_MODEL ||
+                'gemini-2.0-flash',
+        },
+        openai: {
+            apiKey: process.env.TRANSCRIPTION_OPENAI_API_KEY || '',
+            model: process.env.TRANSCRIPTION_OPENAI_MODEL || 'whisper-1',
+        },
+    },
+
+    topicExtraction: {
+        provider: (process.env.TOPIC_EXTRACTION_PROVIDER || 'openai') as
+            | 'openai'
+            | 'google',
+        openai: {
+            apiKey: process.env.TOPIC_EXTRACTION_OPENAI_API_KEY || '',
+            model: process.env.TOPIC_EXTRACTION_OPENAI_MODEL || 'gpt-4o-mini',
+        },
+        google: {
+            apiKey: process.env.TOPIC_EXTRACTION_GOOGLE_API_KEY || '',
+            model:
+                process.env.TOPIC_EXTRACTION_GOOGLE_MODEL || 'gemini-2.0-flash',
+        },
     },
 
     paths: {

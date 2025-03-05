@@ -40,10 +40,10 @@ export async function processTopics(
 
     // Get configuration
     const dbConfig = defaultConfig.database
-    const transcriptionConfig = defaultConfig.transcription
+    const topicExtractionConfig = defaultConfig.topicExtraction
 
     // Create topic extractor
-    const topicExtractor = new TopicExtractor(dbConfig, transcriptionConfig)
+    const topicExtractor = new TopicExtractor(dbConfig, topicExtractionConfig)
 
     try {
         // Process recent transcriptions

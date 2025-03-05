@@ -1,7 +1,7 @@
 import { createSupabaseClient } from '../db/client'
 import type { Tables } from '../db/types'
-import { createGenerativeAIClient } from '../../utils/ai'
-import type { DatabaseConfig, TranscriptionConfig } from '../config/types'
+import { createTopicExtractionAI, type TopicExtractionAI } from '../../utils/ai'
+import type { DatabaseConfig, TopicExtractionConfig } from '../config/types'
 import type { TranscriptionResult } from '../stream/stream-manager'
 
 /**
@@ -24,20 +24,20 @@ export interface Topic {
  */
 export class TopicExtractor {
     private dbClient
-    private aiClient
+    private aiClient: TopicExtractionAI
 
     /**
      * Creates a new TopicExtractor instance
      *
      * @param dbConfig - Database configuration
-     * @param transcriptionConfig - Transcription configuration with AI settings
+     * @param topicExtractionConfig - Topic extraction configuration with AI settings
      */
     constructor(
         private dbConfig: DatabaseConfig,
-        private transcriptionConfig: TranscriptionConfig,
+        private topicExtractionConfig: TopicExtractionConfig,
     ) {
         this.dbClient = createSupabaseClient(dbConfig)
-        this.aiClient = createGenerativeAIClient(transcriptionConfig)
+        this.aiClient = createTopicExtractionAI(topicExtractionConfig)
     }
 
     /**
@@ -69,11 +69,6 @@ export class TopicExtractor {
         // Skip very short texts that likely don't contain meaningful topics
         if (fullText.length < 20) return []
 
-        // Use AI to extract meaningful topics
-        const model = this.aiClient.getGenerativeModel({
-            model: this.transcriptionConfig.model || 'gemini-2.0-flash',
-        })
-
         // Craft a prompt that guides the AI to extract meaningful topics
         const prompt = `
             Extract key topics from this radio transcription. Focus on:
@@ -99,8 +94,8 @@ export class TopicExtractor {
         `
 
         try {
-            const result = await model.generateContent(prompt)
-            const text = result.response.text()
+            // Use our provider-agnostic AI client to generate content
+            const text = await this.aiClient.generateContent(prompt)
 
             // Extract JSON from response (handles cases where AI adds extra text)
             const jsonMatch = text.match(/\[[\s\S]*\]/)

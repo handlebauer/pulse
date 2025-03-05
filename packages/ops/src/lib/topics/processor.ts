@@ -7,7 +7,7 @@
 import { TopicExtractor } from '@pulse/radio'
 import { createSupabaseClient } from '@/lib/db'
 import createLogger from '@/lib/logger'
-import { defaultConfig } from '@/config'
+import type { OpsConfig } from '@/config'
 
 const logger = createLogger('TopicProcessor')
 
@@ -21,6 +21,8 @@ export async function processTranscriptionTopics(
     transcriptionId: string,
     updateTrends = true,
     updateConnections = true,
+    dbConfig: OpsConfig['database'],
+    topicExtractionConfig: OpsConfig['topicExtraction'],
 ): Promise<number> {
     logger.debug(`Processing topics for transcription ${transcriptionId}`)
     const supabase = createSupabaseClient()
@@ -42,10 +44,10 @@ export async function processTranscriptionTopics(
         }
 
         // 2. Use the TopicExtractor to process the transcription
-        const dbConfig = defaultConfig.database
-        const transcriptionConfig = defaultConfig.transcription
-
-        const topicExtractor = new TopicExtractor(dbConfig, transcriptionConfig)
+        const topicExtractor = new TopicExtractor(
+            dbConfig,
+            topicExtractionConfig,
+        )
 
         logger.debug(
             `Processing transcription ${transcriptionId} through TopicExtractor`,

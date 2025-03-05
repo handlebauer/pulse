@@ -52,6 +52,7 @@
         "@supabase/supabase-js": "^2.49.1",
         "dedent": "^1.5.3",
         "dotenv": "^16.4.5",
+        "openai": "^4.86.1",
         "ora": "^8.2.0"
     },
     "engines": {

@@ -21,7 +21,16 @@ export type {
     StreamConfig,
     StreamManagerDependencies,
     SegmentInfo,
+    TranscriptionResult,
 } from './lib/stream/stream-manager'
+
+// Export Transcription Services
+export {
+    createTranscriptionService,
+    createGoogleTranscriptionService,
+    createOpenAITranscriptionService,
+} from './lib/transcribe'
+export type { TranscriptionService } from './lib/transcribe'
 
 // Export configuration types
 export type {
@@ -29,6 +38,7 @@ export type {
     DatabaseConfig,
     RadioBrowserConfig,
     TranscriptionConfig,
+    TopicExtractionConfig,
 } from './lib/config/types'
 
 // Export radio types for consumers
@@ -44,3 +54,7 @@ export {
     findTopicRelationships,
     identifyTopicHierarchy,
 } from './lib/topics'
+
+// Export AI utilities
+export { createTopicExtractionAI } from './utils/ai'
+export type { TopicExtractionAI } from './utils/ai'
