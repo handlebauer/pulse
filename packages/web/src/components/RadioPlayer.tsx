@@ -38,6 +38,8 @@ export function RadioPlayer({
     }) // Default position (percentage)
     const [isDragging, setIsDragging] = useState(false)
     const playerRef = useRef<HTMLDivElement>(null)
+    const stationNameRef = useRef<HTMLDivElement>(null)
+    const [isTextOverflowing, setIsTextOverflowing] = useState(false)
     const dragStartRef = useRef<{
         mouseX: number
         mouseY: number
@@ -48,7 +50,30 @@ export function RadioPlayer({
     // Get transcription data for this station if available
     const transcriptionData = stationId ? transcriptionMap[stationId] : null
     const hasTranscription = !!transcriptionData?.recentText
-    const isCommercial = transcriptionData?.hasCommercials || false
+
+    // Check if station name is overflowing and needs marquee
+    useEffect(() => {
+        const checkOverflow = () => {
+            if (stationNameRef.current) {
+                const element = stationNameRef.current
+                setIsTextOverflowing(element.scrollWidth > element.clientWidth)
+            }
+        }
+
+        // Initial check
+        checkOverflow()
+
+        // Check after a short delay to ensure accurate measurements
+        const timeoutId = setTimeout(checkOverflow, 100)
+
+        // Check on window resize
+        window.addEventListener('resize', checkOverflow)
+
+        return () => {
+            clearTimeout(timeoutId)
+            window.removeEventListener('resize', checkOverflow)
+        }
+    }, [stationName])
 
     // Handle mouse down event to start dragging
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -75,29 +100,6 @@ export function RadioPlayer({
         setIsDragging(true)
     }
 
-    // Handle mouse move event during dragging
-    const handleMouseMove = (e: MouseEvent) => {
-        if (!isDragging || !dragStartRef.current) return
-
-        // Calculate the mouse movement delta
-        const deltaX = e.clientX - dragStartRef.current.mouseX
-        const deltaY = e.clientY - dragStartRef.current.mouseY
-
-        // Convert delta to percentage of viewport
-        const deltaXPercent = (deltaX / window.innerWidth) * 100
-        const deltaYPercent = (deltaY / window.innerHeight) * 100
-
-        // Calculate new position based on starting position plus delta
-        const newX = dragStartRef.current.elemX + deltaXPercent
-        const newY = dragStartRef.current.elemY + deltaYPercent
-
-        // Ensure the player stays within the viewport
-        const boundedX = Math.max(0, Math.min(newX, 100))
-        const boundedY = Math.max(0, Math.min(newY, 100))
-
-        setPosition({ x: boundedX, y: boundedY })
-    }
-
     // Handle mouse up event to stop dragging
     const handleMouseUp = () => {
         setIsDragging(false)
@@ -106,6 +108,29 @@ export function RadioPlayer({
 
     // Add and remove event listeners
     useEffect(() => {
+        // Define handleMouseMove inside the useEffect but outside the if block
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging || !dragStartRef.current) return
+
+            // Calculate the mouse movement delta
+            const deltaX = e.clientX - dragStartRef.current.mouseX
+            const deltaY = e.clientY - dragStartRef.current.mouseY
+
+            // Convert delta to percentage of viewport
+            const deltaXPercent = (deltaX / window.innerWidth) * 100
+            const deltaYPercent = (deltaY / window.innerHeight) * 100
+
+            // Calculate new position based on starting position plus delta
+            const newX = dragStartRef.current.elemX + deltaXPercent
+            const newY = dragStartRef.current.elemY + deltaYPercent
+
+            // Ensure the player stays within the viewport
+            const boundedX = Math.max(0, Math.min(newX, 100))
+            const boundedY = Math.max(0, Math.min(newY, 100))
+
+            setPosition({ x: boundedX, y: boundedY })
+        }
+
         if (isDragging) {
             window.addEventListener('mousemove', handleMouseMove)
             window.addEventListener('mouseup', handleMouseUp)
@@ -120,19 +145,38 @@ export function RadioPlayer({
     return (
         <div
             ref={playerRef}
-            className="fixed bg-black/80 px-6 pr-10 pt-5 pb-4 border border-zinc-800 backdrop-blur-sm p-4 rounded-lg shadow-lg flex flex-col items-center gap-4 z-50 w-auto max-w-md"
+            className="fixed bg-black/80 px-6 pr-10 pt-5 pb-4 border border-zinc-800 backdrop-blur-sm p-4 rounded-lg shadow-lg flex flex-col items-center gap-4 z-50"
             style={{
                 left: `${position.x}%`,
                 top: `${position.y}%`,
                 transform: 'translate(-50%, -50%)',
                 cursor: isDragging ? 'grabbing' : 'default',
+                width: '320px', // Fixed width to ensure consistency
             }}
             onMouseDown={handleMouseDown}
         >
             <div className="flex flex-col w-full">
-                <span className="text-sm font-medium text-white mb-2 truncate pl-4">
-                    {stationName}
-                </span>
+                <div className="w-full mb-2 px-4 overflow-hidden">
+                    {isTextOverflowing ? (
+                        <div className="marquee-container">
+                            <div className="marquee-content">
+                                <span className="text-sm font-medium text-white">
+                                    {stationName}
+                                </span>
+                                <span className="text-sm font-medium text-white ml-8">
+                                    {stationName}
+                                </span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div
+                            ref={stationNameRef}
+                            className="text-sm font-medium text-white truncate"
+                        >
+                            {stationName}
+                        </div>
+                    )}
+                </div>
 
                 <div className="flex items-center gap-4 w-full">
                     <Button
@@ -185,6 +229,29 @@ export function RadioPlayer({
                     )}
                 </div>
             </div>
+
+            {/* Global styles for the marquee effect */}
+            <style
+                dangerouslySetInnerHTML={{
+                    __html: `
+                .marquee-container {
+                    width: 100%;
+                    overflow: hidden;
+                    white-space: nowrap;
+                }
+                
+                .marquee-content {
+                    display: inline-block;
+                    animation: marquee 15s linear infinite;
+                }
+                
+                @keyframes marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+            `,
+                }}
+            />
         </div>
     )
 }

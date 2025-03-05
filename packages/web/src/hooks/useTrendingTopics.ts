@@ -12,6 +12,7 @@ export interface TrendingTopicData {
     stationCount: number // Number of stations discussing this topic
     recentStations: {
         stationId: string
+        stationName: string
         relevanceScore: number
     }[] // List of recent stations discussing this topic
 }
@@ -66,10 +67,40 @@ export function useTrendingTopics(limit = 10) {
                     )
                 }
 
+                // Get all unique station IDs to fetch their names
+                const stationIds = [
+                    ...new Set(
+                        stationTopicsData?.map((item) => item.stationId) || [],
+                    ),
+                ]
+
+                // Fetch station names
+                const { data: stationsData, error: stationsError } =
+                    await supabase
+                        .from('stations')
+                        .select('id, stationName')
+                        .in('id', stationIds)
+
+                if (stationsError) {
+                    throw new Error(
+                        `Error fetching station names: ${stationsError.message}`,
+                    )
+                }
+
+                // Create a map of station IDs to station names
+                const stationMap = new Map()
+                stationsData?.forEach((station) => {
+                    stationMap.set(station.id, station.stationName)
+                })
+
                 // Group station data by topic
                 const stationsByTopic: Record<
                     string,
-                    { stationId: string; relevanceScore: number }[]
+                    {
+                        stationId: string
+                        stationName: string
+                        relevanceScore: number
+                    }[]
                 > = {}
                 const stationCountByTopic: Record<string, number> = {}
 
@@ -84,6 +115,9 @@ export function useTrendingTopics(limit = 10) {
                     // Add station to the topic's stations array
                     stationsByTopic[topicId].push({
                         stationId: item.stationId,
+                        stationName:
+                            stationMap.get(item.stationId) ||
+                            `Station ${item.stationId.substring(0, 8)}...`,
                         relevanceScore: item.relevance_score,
                     })
 
@@ -102,7 +136,12 @@ export function useTrendingTopics(limit = 10) {
                         stationCount: stationCountByTopic[topic.id] || 0,
                         recentStations: (stationsByTopic[topic.id] || [])
                             .sort((a, b) => b.relevanceScore - a.relevanceScore)
-                            .slice(0, 5), // Limit to 5 most relevant stations
+                            .slice(0, 5) // Limit to 5 most relevant stations
+                            .map((station) => ({
+                                stationId: station.stationId,
+                                stationName: station.stationName,
+                                relevanceScore: station.relevanceScore,
+                            })),
                     }),
                 )
 
@@ -163,7 +202,7 @@ export function useTrendingTopics(limit = 10) {
             topicsSubscription.unsubscribe()
             stationTopicsSubscription.unsubscribe()
         }
-    }, [limit])
+    }, [limit, isLoading])
 
     return { topics, isLoading, error }
 }

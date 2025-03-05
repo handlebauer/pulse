@@ -23,10 +23,7 @@ export default async function Home() {
     console.log(`Loading ${stations.length} stations`)
 
     return (
-        <main className="bg-black">
-            <h1 className="text-2xl font-bold text-white mb-6 absolute top-4 left-4 z-10">
-                Radio Stations Around the World
-            </h1>
+        <main className="bg-slate-900">
             <Globe stations={stations || []} />
         </main>
     )
