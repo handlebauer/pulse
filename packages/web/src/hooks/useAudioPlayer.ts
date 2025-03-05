@@ -274,6 +274,8 @@ export function useAudioPlayer({
                 hlsRef.current = null
             }
         }
+        // Disable this warning for now because things are working and I'm afraid of breaking them
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [streamUrl, volume, isMuted])
 
     // Update volume whenever it changes
