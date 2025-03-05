@@ -33,7 +33,7 @@ export function StationTopics({
 
     if (isLoading || !visibleTopics.length) {
         return (
-            <div className="text-sm text-gray-400 p-2 italic flex items-center justify-center select-none">
+            <div className="text-sm text-gray-400 px-3 py-2 italic flex items-center justify-center select-none bg-black/30">
                 <Radio className="w-4 h-4 mr-2 text-gray-400" />
                 No topics available for this station
             </div>
