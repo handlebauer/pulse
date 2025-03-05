@@ -1,8 +1,8 @@
 # @pulse/ops
 
-Operational scripts and services for Pulse Radio.
+Operational scripts and services for Pulse.
 
-This package contains scripts and services for managing the operational aspects of the Pulse Radio platform, including:
+This package contains scripts and services for managing the operational aspects of the Pulse platform, including:
 
 - Fetching and processing radio station data
 - Validating radio station streams
