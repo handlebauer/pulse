@@ -121,7 +121,7 @@ export function useStationTopics(stationId: string | null) {
                     table: 'station_topics',
                     filter: `stationId=eq.${stationId}`,
                 },
-                async (payload) => {
+                async () => {
                     // Refetch all topics when changes occur
                     // This is simpler than merging changes and ensures we have the latest data
                     await fetchStationTopics()
