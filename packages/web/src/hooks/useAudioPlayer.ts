@@ -130,7 +130,7 @@ export function useAudioPlayer({
             }
 
             audioRef.current.onerror = (e) => {
-                console.error('Audio error:', e)
+                console.warn('Audio error:', e)
                 setIsPlaying(false)
             }
         }

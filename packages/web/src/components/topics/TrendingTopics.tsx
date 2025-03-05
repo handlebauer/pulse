@@ -37,7 +37,9 @@ export function TrendingTopics({
     const [visibleTopics, setVisibleTopics] = useState<Topic[]>([])
     const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null)
 
-    console.log('got here')
+    useEffect(() => {
+        console.log('got here')
+    }, [])
 
     // Animate topics in and out based on loading state
     useEffect(() => {

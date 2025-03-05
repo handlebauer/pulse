@@ -247,7 +247,7 @@ export function RadioPlayer({
                             onClick={() =>
                                 setShowTranscription(!showTranscription)
                             }
-                            className={`text-white hover:bg-white/20 hover:text-white cursor-pointer h-10 w-10 flex items-center justify-center ${showTranscription ? 'bg-white/20' : ''}`}
+                            className={`text-white hover:bg-transparent hover:text-white cursor-pointer h-10 w-10 flex items-center justify-center`}
                             title="Show transcription"
                         >
                             <MessageSquare className="h-5 w-5" />

@@ -3,6 +3,7 @@
 # seed data
 scripts/db/stations.json
 scripts/db/reference-stations.json
+scripts/db/preserved-stations.jsonc
 
 # dependencies
 /node_modules

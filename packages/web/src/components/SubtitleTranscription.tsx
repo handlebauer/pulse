@@ -57,9 +57,9 @@ export function SubtitleTranscription({
 
     return (
         <div
-            className="fixed left-1/2 transform -translate-x-1/2 z-50 w-auto max-w-4xl text-center pointer-events-none"
+            className="fixed left-1/2 transform -translate-x-1/2 z-50 w-auto min-w-2/3 text-center pointer-events-none"
             style={{
-                bottom: '20%', // Position above radio player
+                bottom: '15%', // Position above radio player
                 transition: 'opacity 0.3s ease-in-out',
                 opacity: opacity,
             }}
@@ -91,7 +91,7 @@ export function SubtitleTranscription({
                 </p>
 
                 {!isCommercial && transcriptionData.topics.length > 0 && (
-                    <div className="mt-4 flex justify-center gap-2 flex-wrap">
+                    <div className="mt-2 flex justify-center gap-2 flex-wrap">
                         {transcriptionData.topics
                             .slice(0, 3)
                             .map((topic, i) => (
