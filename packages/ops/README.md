@@ -7,6 +7,7 @@ This package contains scripts and services for managing the operational aspects 
 - Fetching and processing radio station data
 - Validating radio station streams
 - Running the stream orchestrator service
+- Processing transcription topics
 
 ## Installation
 
@@ -18,7 +19,7 @@ bun install
 
 ### Station Data Pipeline
 
-The station data pipeline consists of four steps:
+The station data pipeline consists of five steps:
 
 1. **Fetch**: Fetch radio stations from the Radio Browser API
 
@@ -35,7 +36,12 @@ The station data pipeline consists of four steps:
     - Input: Reads from `packages/web/scripts/db/stations.json`
     - Output: Updates the same file with stream status (isOnline, updatedAt)
 
-4. **Filter**: Create specialized subsets of stations
+4. **Geolocate**: Add geographical information to radio stations
+
+    - Input: Reads from `packages/web/scripts/db/stations.json`
+    - Output: Updates the same file with geolocation data (latitude, longitude)
+
+5. **Filter**: Create specialized subsets of stations
 
     - Input: Reads from `packages/web/scripts/db/stations.json`
     - Output: Writes to `packages/web/scripts/db/filtered-stations.json`
@@ -44,19 +50,21 @@ The station data pipeline consists of four steps:
 You can run the full pipeline or individual steps:
 
 ```bash
-# Run the full pipeline (fetch → classify → validate → filter)
+# Run the full pipeline (fetch → classify → validate → geolocate → filter)
 bun run stations:pipeline
 
 # Run individual steps
 bun run stations:fetch     # Only fetch stations
 bun run stations:classify  # Only classify stations
 bun run stations:validate  # Only validate streams
+bun run stations:geolocate # Only geolocate stations
 bun run stations:filter    # Only filter stations
 
 # Run the pipeline with specific steps
 bun run stations:pipeline fetch             # Only fetch
 bun run stations:pipeline classify          # Only classify
 bun run stations:pipeline validate          # Only validate
+bun run stations:pipeline geolocate         # Only geolocate
 bun run stations:pipeline filter            # Only filter
 bun run stations:pipeline fetch-classify    # Fetch then classify
 bun run stations:pipeline classify-validate # Classify then validate
@@ -64,7 +72,21 @@ bun run stations:pipeline validate-filter   # Validate then filter
 bun run stations:pipeline no-filter         # Run all steps except filtering
 ```
 
-### Scheduled Validation
+### Topic Processing
+
+Process transcriptions to extract topics and update topic trends:
+
+```bash
+# Process topics from transcriptions
+bun run topics:process
+```
+
+- Input: Reads transcriptions from the database
+- Output: Extracts topics and updates the topics table in the database
+
+### Scheduled Services
+
+#### Scheduled Validation
 
 The scheduled validation script runs the validation step on a regular interval to keep station data fresh:
 
@@ -80,9 +102,27 @@ bun run scheduled:validate --once
 - Output: Updates the same file with stream status (isOnline, updatedAt)
 - Schedule: Configurable via `VALIDATE_STREAMS_INTERVAL` in .env (default: 5 minutes)
 
-### Stream Orchestrator Service
+#### Scheduled Topic Processing
 
-The stream orchestrator service manages the streaming of radio stations:
+The scheduled topic processing script runs the topic extraction on a regular interval:
+
+```bash
+# Start the scheduled topic processing service
+bun run scheduled:topics
+
+# Run a single topic processing cycle and exit
+bun run scheduled:topics --once
+```
+
+- Input: Reads recent transcriptions from the database
+- Output: Extracts topics and updates topic trends
+- Schedule: Configurable via environment variables
+
+### Radio Services
+
+#### Stream Orchestrator Service
+
+The basic stream orchestrator service manages the streaming of radio stations:
 
 ```bash
 # Start the stream orchestrator service
@@ -95,16 +135,34 @@ bun run service:orchestrator
     - Updates station streaming status in the database
     - Optionally transcribes audio if configured
 
+#### Radio Pipeline Service
+
+The enhanced radio pipeline service combines streaming, transcription, and topic processing:
+
+```bash
+# Start the comprehensive radio pipeline service
+bun run service:radio-pipeline
+```
+
+- Input: Reads online stations from the database
+- Output:
+    - Creates audio segments in the configured directory
+    - Transcribes audio in real-time
+    - Processes topics from transcriptions
+    - Updates topic trends and connections
+
 ## Data Flow
 
 ```
-Radio Browser API → fetch.ts → stations.json → classify.ts → stations.json → validate.ts → stations.json → filter.ts → filtered-stations.json
+Radio Browser API → fetch.ts → stations.json → classify.ts → stations.json → validate.ts → stations.json → geolocate.ts → stations.json → filter.ts → filtered-stations.json
                                                                                       ↓
                                                                             scheduled-validate.ts
                                                                                       ↓
                                                                                  stations.json
                                                                                       ↓
                                                                             orchestrator.ts → audio segments
+                                                                                      ↓
+                                                                            radio-pipeline.ts → transcriptions → topics
 ```
 
 ## Configuration
