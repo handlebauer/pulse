@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { OpenAI } from 'openai'
+import { zodResponseFormat } from 'openai/helpers/zod'
 import type { TopicExtractionConfig } from '@/lib/config/types'
-
+import { z } from 'zod'
 /**
  * Topic Extraction AI provider interface
  * This allows us to provide a consistent interface for different AI providers
@@ -28,7 +29,10 @@ class GoogleTopicExtractionAI implements TopicExtractionAI {
     }
 
     async generateContent(prompt: string): Promise<string> {
-        const model = this.client.getGenerativeModel({ model: this.model })
+        const model = this.client.getGenerativeModel({
+            model: this.model,
+            generationConfig: { responseMimeType: 'application/json' },
+        })
         const result = await model.generateContent(prompt)
         return result.response.text()
     }
@@ -47,7 +51,8 @@ class OpenAITopicExtractionAI implements TopicExtractionAI {
     }
 
     async generateContent(prompt: string): Promise<string> {
-        const response = await this.client.chat.completions.create({
+        console.log('Prompt', prompt)
+        const response = await this.client.beta.chat.completions.parse({
             model: this.model,
             messages: [
                 {
@@ -57,6 +62,18 @@ class OpenAITopicExtractionAI implements TopicExtractionAI {
                 },
                 { role: 'user', content: prompt },
             ],
+            response_format: zodResponseFormat(
+                z.object({
+                    topics: z.array(
+                        z.object({
+                            name: z.string(),
+                            normalizedName: z.string(),
+                            relevanceScore: z.number(),
+                        }),
+                    ),
+                }),
+                'topics',
+            ),
         })
 
         return response.choices[0]?.message?.content || ''

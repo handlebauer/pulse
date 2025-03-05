@@ -3,11 +3,23 @@ import type { Tables } from '../db/types'
 import { createTopicExtractionAI, type TopicExtractionAI } from '../../utils/ai'
 import type { DatabaseConfig, TopicExtractionConfig } from '../config/types'
 import type { TranscriptionResult } from '../stream/stream-manager'
+import dedent from 'dedent'
 
 /**
  * Represents a transcription from the database
  */
 type Transcription = Tables<'transcriptions'>
+
+/**
+ * Input for text-based topic extraction without database dependency
+ */
+export interface TextInput {
+    text: string
+    stationName?: string
+    segment?: {
+        isCommercial?: boolean
+    }
+}
 
 /**
  * Represents an extracted topic with its relevance score
@@ -19,58 +31,50 @@ export interface Topic {
 }
 
 /**
- * TopicExtractor class is responsible for extracting topics from transcriptions using AI
- * and saving them to the database with proper relationships
+ * Core topic extraction functionality without database dependencies
+ * Useful for standalone topic extraction or testing
  */
-export class TopicExtractor {
-    private dbClient
-    private aiClient: TopicExtractionAI
+export class CoreTopicExtractor {
+    protected aiClient: TopicExtractionAI
 
     /**
-     * Creates a new TopicExtractor instance
+     * Creates a new CoreTopicExtractor instance
      *
-     * @param dbConfig - Database configuration
      * @param topicExtractionConfig - Topic extraction configuration with AI settings
      */
-    constructor(
-        private dbConfig: DatabaseConfig,
-        private topicExtractionConfig: TopicExtractionConfig,
-    ) {
-        this.dbClient = createSupabaseClient(dbConfig)
+    constructor(protected topicExtractionConfig: TopicExtractionConfig) {
         this.aiClient = createTopicExtractionAI(topicExtractionConfig)
     }
 
     /**
-     * Extract topics from a transcription using AI model
+     * Extract topics from raw text using AI model
      *
-     * @param transcription - The transcription object from the database
+     * @param input - The text to analyze with optional context
      * @returns Array of extracted topics with relevance scores
      */
-    async extractTopicsFromTranscription(
-        transcription: Transcription,
-    ): Promise<Topic[]> {
-        // Skip if no transcription data
-        if (
-            !transcription.transcription ||
-            !Array.isArray(transcription.transcription) ||
-            transcription.transcription.length === 0
-        ) {
+    async extractTopicsFromText(input: TextInput): Promise<Topic[]> {
+        // Skip if no text data
+        if (!input.text || input.text.trim().length < 20) {
             return []
         }
 
-        // Concatenate all transcription segments, filtering out commercials
-        const segments =
-            transcription.transcription as unknown as TranscriptionResult[]
-        const fullText = segments
-            .filter((segment) => !segment.isCommercial)
-            .map((segment) => segment.caption)
-            .join(' ')
+        // Skip commercial segments if specified
+        if (input.segment?.isCommercial) {
+            return []
+        }
 
-        // Skip very short texts that likely don't contain meaningful topics
-        if (fullText.length < 20) return []
+        // Create a context string if station name is provided
+        const contextPrefix = input.stationName
+            ? `The following is a transcription from radio station ${input.stationName}.`
+            : 'The following is a radio transcription.'
+
+        let prompt = null
 
         // Craft a prompt that guides the AI to extract meaningful topics
-        const prompt = `
+        if (this.topicExtractionConfig.provider === 'google') {
+            prompt = dedent`
+            ${contextPrefix}
+            
             Extract key topics from this radio transcription. Focus on:
             - News topics (people, places, events, organizations)
             - Major discussion themes
@@ -86,12 +90,48 @@ export class TopicExtractor {
             - Focus on substantive discussion topics, not casual mentions
             - Prioritize named entities (people, places, organizations)
             - Combine related subtopics into broader themes when appropriate
-            - Be specific but not overly narrow
+            - Bias towards one-word topics unless semantic integrity requires more than one word
             
             Respond in valid JSON format as an array of objects with fields: name, normalizedName, relevanceScore.
             
-            Transcription: "${fullText}"
+            Here is the transcription:
+            
+            """
+            ${input.text}
+            """
         `
+        } else if (this.topicExtractionConfig.provider === 'openai') {
+            prompt = dedent`
+            ${contextPrefix}
+            
+            Extract key topics from this radio transcription. Focus on:
+            - News topics (people, places, events, organizations)
+            - Major discussion themes
+            - Important conversational topics
+            - Cultural or social references 
+            
+            For each topic:
+            - Provide the canonical name (proper capitalization)
+            - Provide a normalized form (lowercase, singular, without articles)
+            - Assign a relevance score (0.0-1.0) based on importance to the overall discussion
+
+            Guidelines for topics:
+            - Focus on substantive discussion topics, not casual mentions
+            - Prioritize named entities (people, places, organizations)
+            - Combine related subtopics into broader themes when appropriate
+            - Bias your responses towards one-word topics unless semantic integrity requires more than one word
+
+            Here is the transcription:
+            
+            """
+            ${input.text}
+            """
+        `
+        } else {
+            throw new Error(
+                `Unsupported provider: ${this.topicExtractionConfig.provider}`,
+            )
+        }
 
         try {
             // Use our provider-agnostic AI client to generate content
@@ -118,6 +158,77 @@ export class TopicExtractor {
             console.error('Error extracting topics:', error)
             return []
         }
+    }
+}
+
+/**
+ * TopicExtractor class is responsible for extracting topics from transcriptions using AI
+ * and saving them to the database with proper relationships
+ */
+export class TopicExtractor extends CoreTopicExtractor {
+    private dbClient
+
+    /**
+     * Creates a new TopicExtractor instance
+     *
+     * @param dbConfig - Database configuration
+     * @param topicExtractionConfig - Topic extraction configuration with AI settings
+     */
+    constructor(
+        private dbConfig: DatabaseConfig,
+        topicExtractionConfig: TopicExtractionConfig,
+    ) {
+        super(topicExtractionConfig)
+        this.dbClient = createSupabaseClient(dbConfig)
+    }
+
+    /**
+     * Extract topics from a transcription database object using AI model
+     *
+     * @param transcription - The transcription object from the database
+     * @returns Array of extracted topics with relevance scores
+     */
+    async extractTopicsFromTranscription(
+        transcription: Transcription,
+    ): Promise<Topic[]> {
+        // Skip if no transcription data
+        if (
+            !transcription.transcription ||
+            !Array.isArray(transcription.transcription) ||
+            transcription.transcription.length === 0
+        ) {
+            return []
+        }
+
+        // Find the station name if available
+        let stationName = undefined
+        if (transcription.stationId) {
+            try {
+                const { data } = await this.dbClient
+                    .from('stations')
+                    .select('stationName')
+                    .eq('id', transcription.stationId)
+                    .single()
+
+                stationName = data?.stationName
+            } catch {
+                // Continue without station name if we can't fetch it
+            }
+        }
+
+        // Concatenate all transcription segments, filtering out commercials
+        const segments =
+            transcription.transcription as unknown as TranscriptionResult[]
+        const fullText = segments
+            .filter((segment) => !segment.isCommercial)
+            .map((segment) => segment.caption)
+            .join(' ')
+
+        // Use the core extraction method
+        return this.extractTopicsFromText({
+            text: fullText,
+            stationName,
+        })
     }
 
     /**

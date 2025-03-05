@@ -46,8 +46,8 @@ export type { RadioStation, RadioStationFilter } from './lib/radio/types'
 export { RadioStationCategory } from './lib/radio/types'
 
 // Export Topic Processing Engine
-export { TopicExtractor } from './lib/topics'
-export type { Topic } from './lib/topics'
+export { TopicExtractor, CoreTopicExtractor } from './lib/topics'
+export type { Topic, TextInput } from './lib/topics'
 export {
     normalizeTopic,
     calculateTopicSimilarity,
