@@ -89,21 +89,6 @@ export function SubtitleTranscription({
                 >
                     {transcriptionData.recentText}
                 </p>
-
-                {!isCommercial && transcriptionData.topics.length > 0 && (
-                    <div className="mt-2 flex justify-center gap-2 flex-wrap">
-                        {transcriptionData.topics
-                            .slice(0, 3)
-                            .map((topic, i) => (
-                                <span
-                                    key={i}
-                                    className="text-xs bg-white/15 text-white/90 px-3 py-1 rounded-full"
-                                >
-                                    {topic}
-                                </span>
-                            ))}
-                    </div>
-                )}
             </div>
         </div>
     )

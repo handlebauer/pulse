@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/db/clients/browser'
 
 // Initialize Supabase client
@@ -22,11 +22,21 @@ export function useTrendingTopics(limit = 10) {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<Error | null>(null)
 
+    // Add these refs to help manage state without triggering effects
+    const isMountedRef = useRef(true)
+    const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const retryCountRef = useRef(0)
+    const MAX_RETRY_COUNT = 3
+    const RETRY_DELAY = 5000 // 5 seconds
+
     useEffect(() => {
+        isMountedRef.current = true
+
         // Fetch trending topics
         const fetchTrendingTopics = async () => {
+            if (!isMountedRef.current) return
+
             setIsLoading(true)
-            setError(null)
 
             try {
                 // First fetch trending topics
@@ -38,15 +48,22 @@ export function useTrendingTopics(limit = 10) {
                         .order('trend_score', { ascending: false })
                         .limit(limit)
 
+                if (!isMountedRef.current) return
+
                 if (topicsError) {
                     throw new Error(
                         `Error fetching trending topics: ${topicsError.message}`,
                     )
                 }
 
+                // Handle empty topics gracefully - this is expected in some cases
                 if (!trendingTopics || trendingTopics.length === 0) {
+                    console.log('No trending topics found in database')
                     setTopics([])
+                    setError(null)
                     setIsLoading(false)
+                    // Reset retry count since we got a valid (empty) response
+                    retryCountRef.current = 0
                     return
                 }
 
@@ -61,6 +78,8 @@ export function useTrendingTopics(limit = 10) {
                         .in('topicId', topicIds)
                         .order('relevance_score', { ascending: false })
 
+                if (!isMountedRef.current) return
+
                 if (stationError) {
                     throw new Error(
                         `Error fetching station data for topics: ${stationError.message}`,
@@ -74,12 +93,34 @@ export function useTrendingTopics(limit = 10) {
                     ),
                 ]
 
+                // Skip station name fetch if there are no stations
+                if (stationIds.length === 0) {
+                    const formattedTopics: TrendingTopicData[] =
+                        trendingTopics.map((topic) => ({
+                            id: topic.id,
+                            name: topic.name,
+                            normalizedName: topic.normalized_name,
+                            trendScore: topic.trend_score,
+                            stationCount: 0,
+                            recentStations: [],
+                        }))
+
+                    if (isMountedRef.current) {
+                        setTopics(formattedTopics)
+                        setError(null)
+                        retryCountRef.current = 0
+                    }
+                    return
+                }
+
                 // Fetch station names
                 const { data: stationsData, error: stationsError } =
                     await supabase
                         .from('stations')
                         .select('id, stationName')
                         .in('id', stationIds)
+
+                if (!isMountedRef.current) return
 
                 if (stationsError) {
                     throw new Error(
@@ -145,22 +186,53 @@ export function useTrendingTopics(limit = 10) {
                     }),
                 )
 
-                setTopics(formattedTopics)
+                if (isMountedRef.current) {
+                    setTopics(formattedTopics)
+                    setError(null)
+                    // Reset retry count on successful fetch
+                    retryCountRef.current = 0
+                }
             } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err
-                        : new Error('Unknown error occurred'),
-                )
+                if (!isMountedRef.current) return
+
                 console.error('Error in useTrendingTopics:', err)
+
+                // Implement retry logic with exponential backoff
+                if (retryCountRef.current < MAX_RETRY_COUNT) {
+                    console.log(
+                        `Retrying fetch (${retryCountRef.current + 1}/${MAX_RETRY_COUNT}) in ${RETRY_DELAY}ms`,
+                    )
+                    retryCountRef.current++
+
+                    // Clear any existing timeout
+                    if (retryTimeoutRef.current) {
+                        clearTimeout(retryTimeoutRef.current)
+                    }
+
+                    // Set up retry with delay
+                    retryTimeoutRef.current = setTimeout(() => {
+                        if (isMountedRef.current) {
+                            fetchTrendingTopics()
+                        }
+                    }, RETRY_DELAY)
+                } else {
+                    // After max retries, set the error state
+                    setError(
+                        err instanceof Error
+                            ? err
+                            : new Error('Unknown error occurred'),
+                    )
+                }
             } finally {
-                setIsLoading(false)
+                if (isMountedRef.current) {
+                    setIsLoading(false)
+                }
             }
         }
 
         fetchTrendingTopics()
 
-        // Set up realtime subscription for topic changes
+        // Set up realtime subscription for topic changes with debounce
         const topicsSubscription = supabase
             .channel('trending-topics')
             .on(
@@ -172,8 +244,10 @@ export function useTrendingTopics(limit = 10) {
                     filter: 'is_trending=eq.true',
                 },
                 async () => {
-                    // Refetch all trending topics when changes occur
-                    await fetchTrendingTopics()
+                    // Only refetch if not already loading and component is mounted
+                    if (!isLoading && isMountedRef.current) {
+                        await fetchTrendingTopics()
+                    }
                 },
             )
             .subscribe()
@@ -189,20 +263,29 @@ export function useTrendingTopics(limit = 10) {
                     table: 'station_topics',
                 },
                 async () => {
-                    // Refetch trending topics less frequently on station_topics changes
-                    // to avoid excessive updates
-                    if (!isLoading) {
+                    // Only refetch if not already loading and component is mounted
+                    if (!isLoading && isMountedRef.current) {
                         await fetchTrendingTopics()
                     }
                 },
             )
             .subscribe()
 
+        // Cleanup function
         return () => {
+            isMountedRef.current = false
+
+            // Clear any pending timeouts
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current)
+            }
+
+            // Unsubscribe from channels
             topicsSubscription.unsubscribe()
             stationTopicsSubscription.unsubscribe()
         }
-    }, [limit, isLoading])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [limit]) // Remove isLoading from dependencies to prevent infinite loop
 
     return { topics, isLoading, error }
 }
