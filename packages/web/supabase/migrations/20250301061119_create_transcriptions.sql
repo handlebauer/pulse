@@ -10,7 +10,7 @@ create table if not exists public.transcriptions (
     duration interval generated always as ("endTime" - "startTime") stored,
     
     -- Transcription content
-    transcription jsonb not null default '[]'::jsonb, -- Array of {timecode, caption, isCommercial} objects
+    transcription jsonb not null default '[]'::jsonb, -- Array of {timecode, caption, isCommercial, isMusic} objects
     
     -- Timestamps
     "createdAt" timestamp with time zone default now() not null,
@@ -73,4 +73,4 @@ alter publication supabase_realtime add table public.transcriptions;
 -- Comments
 comment on table public.transcriptions is 'Stores radio stream transcriptions with their associated audio segments';
 comment on column public.transcriptions."audioData" is 'Base64 encoded audio segment data';
-comment on column public.transcriptions.transcription is 'JSON array of transcription objects with timecode, caption, and isCommercial flag';
+comment on column public.transcriptions.transcription is 'JSON array of transcription objects with timecode, caption, isCommercial, and isMusic flags';

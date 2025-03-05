@@ -5,12 +5,23 @@ import { extractTopics } from '@/utils/textProcessing'
 // Initialize Supabase client
 const supabase = createClient()
 
+/**
+ * TranscriptionSegment from the backend API
+ */
+interface TranscriptionSegment {
+    timecode: string
+    caption: string
+    isCommercial?: boolean
+    isMusic?: boolean
+}
+
 export interface TranscriptionData {
     stationId: string
     topics: string[]
     recentText: string
     updatedAt: string
     hasCommercials: boolean
+    hasMusic: boolean
 }
 
 export function useTranscriptions() {
@@ -42,21 +53,23 @@ export function useTranscriptions() {
             const newTranscriptionMap: Record<string, TranscriptionData> = {}
 
             data.forEach((item) => {
-                const transcription = item.transcription
+                const transcription =
+                    item.transcription as unknown as TranscriptionSegment[]
                 if (!transcription || !Array.isArray(transcription)) return
 
                 // Get the most recent text
-                const recentText = transcription
-                    .map((t: any) => t.caption)
-                    .join(' ')
+                const recentText = transcription.map((t) => t.caption).join(' ')
 
                 // Extract topics
                 const topics = extractTopics(recentText)
 
                 // Check if any segment is marked as a commercial
                 const hasCommercials = transcription.some(
-                    (t: any) => t.hasCommercials === true,
+                    (t) => t.isCommercial === true,
                 )
+
+                // Check if any segment contains music
+                const hasMusic = transcription.some((t) => t.isMusic === true)
 
                 // Only add if we don't already have newer data for this station
                 if (
@@ -70,6 +83,7 @@ export function useTranscriptions() {
                         recentText,
                         updatedAt: item.updatedAt,
                         hasCommercials,
+                        hasMusic,
                     }
                 }
             })
@@ -91,18 +105,23 @@ export function useTranscriptions() {
                     table: 'transcriptions',
                 },
                 (payload) => {
-                    const newData = payload.new as any
+                    const newData = payload.new as {
+                        stationId: string
+                        transcription: unknown
+                        updatedAt: string
+                    }
                     if (!newData || !newData.transcription) return
 
                     console.log('[New Transcription Data]', newData)
 
                     // Process the new transcription
-                    const transcription = newData.transcription
+                    const transcription =
+                        newData.transcription as unknown as TranscriptionSegment[]
                     if (!transcription || !Array.isArray(transcription)) return
 
                     // Get the most recent text
                     const recentText = transcription
-                        .map((t: any) => t.caption)
+                        .map((t) => t.caption)
                         .join(' ')
 
                     // Extract topics
@@ -110,7 +129,12 @@ export function useTranscriptions() {
 
                     // Check if any segment is marked as a commercial
                     const hasCommercials = transcription.some(
-                        (t: any) => t.hasCommercials === true,
+                        (t) => t.isCommercial === true,
+                    )
+
+                    // Check if any segment contains music
+                    const hasMusic = transcription.some(
+                        (t) => t.isMusic === true,
                     )
 
                     // Update the transcription map
@@ -122,6 +146,7 @@ export function useTranscriptions() {
                             recentText,
                             updatedAt: newData.updatedAt,
                             hasCommercials,
+                            hasMusic,
                         },
                     }))
                 },

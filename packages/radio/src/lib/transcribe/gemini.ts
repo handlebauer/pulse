@@ -4,19 +4,23 @@ import { type TranscriptionResult } from '@/lib/stream/stream-manager'
 
 const DEFAULT_MODEL = 'gemini-2.0-flash'
 const DEFAULT_PROMPT = dedent`
-    Please transcribe this radio stream, and classify whether each segment is a commercial advertisement or not.
+    Please transcribe this radio stream, and classify whether each segment is a commercial advertisement or contains music.
     Use the following format: 
 
     {
         timecode: 'hh:mm:ss',
         caption: 'This is the caption for the first 4 seconds of the radio stream.',
-        isCommercial: boolean
+        isCommercial: boolean,
+        isMusic: boolean
     }
     
     Guidelines for commercial classification:
     - Segments that promote products, services, or businesses should be marked as commercial (true)
     - Segments with jingles, slogans, or calls to action for purchases should be marked as commercial (true)
-    - Regular programming, news, music, talk shows, or station identifications should be marked as non-commercial (false)
+    
+    Guidelines for music classification:
+    - Segments containing songs, instrumentals, or music performances should be marked as music (true)
+    - Segments with spoken content should be marked as music (true) only if the music is foreground
     
     Your final output should be an array of transcription objects.
 `
@@ -87,6 +91,7 @@ export function createGoogleTranscriptionService(
                     timecode: item.timecode || '00:00:00',
                     caption: item.caption || '',
                     isCommercial: item.isCommercial === true,
+                    isMusic: item.isMusic === true,
                 }))
             }
 

@@ -35,6 +35,7 @@ export interface TranscriptionResult {
     timecode: string
     caption: string
     isCommercial?: boolean
+    isMusic?: boolean
 }
 
 /**

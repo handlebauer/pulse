@@ -65,6 +65,9 @@ export function createOpenAITranscriptionService(
                     // OpenAI doesn't detect commercials by default, so we'll mark all as non-commercial
                     // This could be improved by using a separate OpenAI classification call
                     isCommercial: false,
+                    // OpenAI doesn't detect music by default, marking all as non-music
+                    // This could be improved by using a separate OpenAI classification call
+                    isMusic: false,
                 }
             })
         } catch (error) {

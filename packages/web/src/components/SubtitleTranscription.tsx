@@ -1,5 +1,5 @@
 import { TranscriptionData } from '@/hooks/useTranscriptions'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Music } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 
 interface SubtitleTranscriptionProps {
@@ -54,6 +54,7 @@ export function SubtitleTranscription({
     if (!visible) return null
 
     const isCommercial = transcriptionData?.hasCommercials || false
+    const hasMusic = transcriptionData?.hasMusic || false
 
     return (
         <div
@@ -66,7 +67,13 @@ export function SubtitleTranscription({
         >
             <div
                 className={`px-8 py-4 rounded-2xl backdrop-blur-sm shadow-2xl
-                    ${isCommercial ? 'bg-red-900/30' : 'bg-black/40'}`}
+                    ${
+                        isCommercial
+                            ? 'bg-red-900/30'
+                            : hasMusic
+                              ? 'bg-blue-900/30'
+                              : 'bg-black/40'
+                    }`}
             >
                 {isCommercial && (
                     <div className="flex items-center justify-center gap-2 mb-3">
@@ -76,9 +83,23 @@ export function SubtitleTranscription({
                         </span>
                     </div>
                 )}
+                {hasMusic && !isCommercial && (
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                        <Music className="h-4 w-4 text-blue-300" />
+                        <span className="text-sm font-semibold text-blue-300 tracking-wider uppercase">
+                            Music Playing
+                        </span>
+                    </div>
+                )}
                 <p
                     className={`text-2xl font-medium leading-relaxed tracking-wide text-center
-                    ${isCommercial ? 'text-white/80 italic' : 'text-white'}
+                    ${
+                        isCommercial
+                            ? 'text-white/80 italic'
+                            : hasMusic
+                              ? 'text-blue-50'
+                              : 'text-white'
+                    }
                     text-shadow-subtitle ${animateNewText ? 'animate-pulse' : ''}`}
                     style={{
                         textShadow:
