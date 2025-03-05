@@ -4,6 +4,8 @@ import { Play, Pause, Volume2, VolumeX, MessageSquare } from 'lucide-react'
 import { useAudioPlayer } from '@/hooks/useAudioPlayer'
 import { TranscriptionData } from '@/hooks/useTranscriptions'
 import { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react'
+import { Station } from './map/types'
+import { useAudioPlayerContext } from '@/contexts/AudioPlayerContext'
 
 interface RadioPlayerProps {
     stationName: string
@@ -12,6 +14,7 @@ interface RadioPlayerProps {
     showTranscription: boolean
     setShowTranscription: Dispatch<SetStateAction<boolean>>
     transcriptionMap: Record<string, TranscriptionData>
+    currentlyPlayingStation: Station | null
 }
 
 export function RadioPlayer({
@@ -21,21 +24,35 @@ export function RadioPlayer({
     showTranscription,
     setShowTranscription,
     transcriptionMap,
+    currentlyPlayingStation,
 }: RadioPlayerProps) {
-    const {
-        isPlaying,
-        volume,
-        isMuted,
-        togglePlayPause,
-        handleVolumeChange,
-        toggleMute,
-    } = useAudioPlayer({ streamUrl })
+    // Access the audio context
+    const { toggleStation, isPlaying: contextIsPlaying } =
+        useAudioPlayerContext()
+
+    // Create a station object from the current props for quick access
+    const thisStation: Station = {
+        id: stationId || '',
+        stationName,
+        streamUrl,
+        latitude: 0,
+        longitude: 0,
+    }
+
+    // Use the currently playing station's stream URL, if available
+    const audioStreamUrl = currentlyPlayingStation?.streamUrl || ''
+
+    // Initialize audio player
+    const { volume, isMuted, handleVolumeChange, toggleMute } = useAudioPlayer({
+        streamUrl: audioStreamUrl,
+        externalIsPlaying: contextIsPlaying,
+    })
 
     // State for draggable functionality
     const [position, setPosition] = useState<{ x: number; y: number }>({
         x: 50,
         y: 92,
-    }) // Default position (percentage)
+    })
     const [isDragging, setIsDragging] = useState(false)
     const playerRef = useRef<HTMLDivElement>(null)
     const stationNameRef = useRef<HTMLDivElement>(null)
@@ -51,7 +68,14 @@ export function RadioPlayer({
     const transcriptionData = stationId ? transcriptionMap[stationId] : null
     const hasTranscription = !!transcriptionData?.recentText
 
-    // Check if station name is overflowing and needs marquee
+    // Handle play/pause with a simple implementation
+    const handlePlayPause = () => {
+        // Use toggleStation from the context to handle both play/pause toggling
+        // and switching between stations
+        toggleStation(thisStation)
+    }
+
+    // Check if station name is overflowing and needs a marquee effect
     useEffect(() => {
         const checkOverflow = () => {
             if (stationNameRef.current) {
@@ -75,7 +99,7 @@ export function RadioPlayer({
         }
     }, [stationName])
 
-    // Handle mouse down event to start dragging
+    // Handle dragging functionality
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         // Don't start dragging if the click is on an interactive element
         if (
@@ -100,15 +124,13 @@ export function RadioPlayer({
         setIsDragging(true)
     }
 
-    // Handle mouse up event to stop dragging
     const handleMouseUp = () => {
         setIsDragging(false)
         dragStartRef.current = null
     }
 
-    // Add and remove event listeners
+    // Add mouse move event listener when dragging
     useEffect(() => {
-        // Define handleMouseMove inside the useEffect but outside the if block
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDragging || !dragStartRef.current) return
 
@@ -141,6 +163,10 @@ export function RadioPlayer({
             window.removeEventListener('mouseup', handleMouseUp)
         }
     }, [isDragging])
+
+    // Is this specific station currently playing?
+    const isCurrentlyPlaying =
+        currentlyPlayingStation?.id === stationId && contextIsPlaying
 
     return (
         <div
@@ -182,10 +208,10 @@ export function RadioPlayer({
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={togglePlayPause}
+                        onClick={handlePlayPause}
                         className="text-white pl-1 hover:bg-transparent hover:text-white cursor-pointer flex items-center justify-center h-10 w-10"
                     >
-                        {isPlaying ? (
+                        {isCurrentlyPlaying ? (
                             <Pause className="h-6 w-6" />
                         ) : (
                             <Play className="h-6 w-6" />

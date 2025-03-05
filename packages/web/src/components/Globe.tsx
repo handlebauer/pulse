@@ -22,6 +22,7 @@ import { TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTrendingTopics } from '@/hooks/useTrendingTopics'
 import { cn } from '@/lib/utils'
+import { useAudioPlayerContext } from '@/contexts/AudioPlayerContext'
 
 interface GlobeProps {
     stations: Station[]
@@ -36,6 +37,7 @@ export function Globe({ stations }: GlobeProps) {
     const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
     const [showTrendingTopics, setShowTrendingTopics] = useState(false)
     const { topics: visibleTopics } = useTrendingTopics(10)
+    const { currentlyPlayingStation } = useAudioPlayerContext()
 
     useEffect(() => {
         if (!mapContainer.current) return
@@ -245,6 +247,7 @@ export function Globe({ stations }: GlobeProps) {
                         showTranscription={showTranscription}
                         setShowTranscription={setShowTranscription}
                         transcriptionMap={transcriptionMap}
+                        currentlyPlayingStation={currentlyPlayingStation}
                     />
                 </div>
             )}

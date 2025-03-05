@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/db/clients/server'
 import { Globe } from '@/components/Globe'
+import { AudioPlayerProvider } from '@/contexts/AudioPlayerContext'
 
 type Station = {
     id: string
@@ -24,7 +25,9 @@ export default async function Home() {
 
     return (
         <main className="bg-slate-900">
-            <Globe stations={stations || []} />
+            <AudioPlayerProvider>
+                <Globe stations={stations || []} />
+            </AudioPlayerProvider>
         </main>
     )
 }
