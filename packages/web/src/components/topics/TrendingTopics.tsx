@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTrendingTopics } from '@/hooks/useTrendingTopics'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -24,6 +23,7 @@ export interface TrendingTopicsProps {
     selectedTopicId?: string | null
     maxTopics?: number
     isVisible?: boolean
+    onEmptyStateChange?: (isEmpty: boolean, hasError?: boolean) => void
 }
 
 export function TrendingTopics({
@@ -32,6 +32,7 @@ export function TrendingTopics({
     selectedTopicId,
     maxTopics = 15,
     isVisible = true,
+    onEmptyStateChange,
 }: TrendingTopicsProps) {
     const { topics, isLoading, error } = useTrendingTopics(maxTopics)
     const [visibleTopics, setVisibleTopics] = useState<Topic[]>([])
@@ -40,6 +41,13 @@ export function TrendingTopics({
     useEffect(() => {
         console.log('got here')
     }, [])
+
+    // Update empty state
+    useEffect(() => {
+        if (onEmptyStateChange && !isLoading) {
+            onEmptyStateChange(visibleTopics.length === 0 || !!error, !!error)
+        }
+    }, [visibleTopics.length, isLoading, onEmptyStateChange, error])
 
     // Animate topics in and out based on loading state
     useEffect(() => {
@@ -78,57 +86,44 @@ export function TrendingTopics({
         return null
     }
 
-    // Show empty state message when no topics are available and not loading
+    // Remove the empty state message display, as we'll now show it in the button label
     if (!isLoading && visibleTopics.length === 0) {
-        return (
-            <div className="fixed -top-12 -right-12 w-[320px] z-10 text-sm text-gray-400 bg-black/30 px-3 py-2 flex items-center h-10 select-none">
-                No topics trending at this time
-            </div>
-        )
+        return null
     }
 
+    // If there's an error and we're visible, show the error message
     if (error) {
         return (
-            <Card
+            <div
                 className={cn(
-                    'bg-black/40 border-gray-700/50 text-gray-200',
+                    'bg-black/40 border border-gray-700/50 text-gray-200 rounded-md',
                     'w-[320px]',
                     className,
                 )}
                 style={{ minWidth: '320px', maxWidth: '320px' }}
             >
-                <CardHeader className="pb-2 px-3">
-                    <CardTitle className="text-lg text-gray-300">
-                        Trending Topics
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-red-400 px-3">
+                <div className="text-sm text-red-400 px-3 py-2">
                     Failed to load trending topics
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         )
     }
 
     return (
-        <Card
+        <div
             className={cn(
-                'bg-black/40 border-gray-700/50 text-gray-200 overflow-hidden',
+                'bg-black/40 border border-gray-700/50 text-gray-200 overflow-hidden rounded-md',
                 'w-[320px]',
                 className,
             )}
             style={{ minWidth: '320px', maxWidth: '320px' }}
         >
-            <CardHeader className="pb-2 px-3">
-                <CardTitle className="text-lg text-gray-300">
-                    Trending Topics
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1.5 pb-3 max-h-[70vh] overflow-y-auto custom-scrollbar px-3">
+            <div className="space-y-1.5 py-2 max-h-[70vh] overflow-y-auto custom-scrollbar px-2">
                 {isLoading
                     ? // Loading skeletons
                       Array.from({ length: 5 }).map((_, i) => (
                           <div key={`skeleton-${i}`} className="w-full mb-1.5">
-                              <Skeleton className="h-9 bg-gray-700/30 w-full rounded-md" />
+                              <Skeleton className="h-7 w-full bg-gray-700/30" />
                           </div>
                       ))
                     : // Actual topics
@@ -197,9 +192,6 @@ export function TrendingTopics({
                                               boxSizing: 'border-box',
                                           }}
                                       >
-                                          <div className="font-medium mb-1.5">
-                                              Stations discussing this:
-                                          </div>
                                           <div className="space-y-1">
                                               {topic.stations.length > 0 ? (
                                                   topic.stations.map(
@@ -214,7 +206,6 @@ export function TrendingTopics({
                                                                   width: '100%',
                                                               }}
                                                           >
-                                                              <span className="w-1.5 h-1.5 bg-gray-500 rounded-full mr-1.5 flex-shrink-0"></span>
                                                               <span className="truncate max-w-[250px]">
                                                                   {station.stationName ||
                                                                       station.id ||
@@ -233,7 +224,7 @@ export function TrendingTopics({
                                   )}
                           </div>
                       ))}
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     )
 }

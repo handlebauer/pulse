@@ -17,12 +17,12 @@ import { removePopup } from './map/popupManager'
 import { useTranscriptions } from '@/hooks/useTranscriptions'
 import { SubtitleTranscription } from './SubtitleTranscription'
 import { StationTopics } from './topics/StationTopics'
-import { TrendingTopics } from './topics/TrendingTopics'
-import { TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTrendingTopics } from '@/hooks/useTrendingTopics'
 import { cn } from '@/lib/utils'
 import { useAudioPlayerContext } from '@/contexts/AudioPlayerContext'
+import { MapLayerControls } from './map/MapLayerControls'
+import { MapControls } from './map/MapControls'
 
 interface GlobeProps {
     stations: Station[]
@@ -35,7 +35,6 @@ export function Globe({ stations }: GlobeProps) {
     const { transcriptionMap, isLoading } = useTranscriptions()
     const [showTranscription, setShowTranscription] = useState(false)
     const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
-    const [showTrendingTopics, setShowTrendingTopics] = useState(false)
     const { topics: visibleTopics } = useTrendingTopics(10)
     const { currentlyPlayingStation } = useAudioPlayerContext()
 
@@ -103,7 +102,6 @@ export function Globe({ stations }: GlobeProps) {
         }
     }, [stations])
 
-    // Add handler for topic clicks
     const handleTopicClick = (topicId: string) => {
         setSelectedTopicId((prevId) => (prevId === topicId ? null : topicId))
 
@@ -114,11 +112,6 @@ export function Globe({ stations }: GlobeProps) {
 
         // For now, we'll just highlight the topic in the UI
         // Additional implementation would be part of Phase 3 in the TODO list
-    }
-
-    // Toggle trending topics layer
-    const toggleTrendingTopics = () => {
-        setShowTrendingTopics((prev) => !prev)
     }
 
     // Add a topic indicator when a topic is selected
@@ -160,60 +153,17 @@ export function Globe({ stations }: GlobeProps) {
     }
 
     return (
-        <>
+        <div className="absolute inset-0 overflow-hidden">
             <div ref={mapContainer} className="w-full h-screen fixed inset-0" />
 
             {/* Topic indicator - shows when a topic is selected (now at top) */}
             <TopicIndicator />
 
-            {/* Map Controls - Fixed position for the button */}
-            <div className="fixed top-6 right-6 z-10 flex flex-col items-end gap-2">
-                {/* Layer toggle button in a fixed-size container */}
-                <div className="w-10 h-10 relative">
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-10 w-10 p-0 rounded-full bg-black/30 hover:bg-black/50 hover:text-gray-200 hover:border-indigo-500 border-gray-700/50 text-gray-200 shadow-lg absolute top-0 right-0 z-20"
-                        title="Toggle Trending Topics"
-                        onClick={toggleTrendingTopics}
-                    >
-                        <TrendingUp className="h-5 w-5" />
-                        {showTrendingTopics && (
-                            <div className="absolute inset-0 rounded-full ring-1 ring-indigo-500/70 bg-black/20 pointer-events-none text-gray-200" />
-                        )}
-                    </Button>
-                </div>
-
-                {/* Trending Topics panel - conditionally visible but fixed width */}
-                <div className="w-full max-w-xs">
-                    <div
-                        className={cn(
-                            'transition-all duration-300',
-                            showTrendingTopics
-                                ? 'opacity-100 translate-y-0'
-                                : 'opacity-0 -translate-y-4 pointer-events-none',
-                        )}
-                    >
-                        <TrendingTopics
-                            className="shadow-xl w-full"
-                            onTopicClick={handleTopicClick}
-                            selectedTopicId={selectedTopicId}
-                            isVisible={showTrendingTopics}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Station Topics panel - only shown when a station is selected */}
-            {selectedStation && (
-                <div className="fixed top-6 left-6 max-w-xs w-full z-10 transition-all duration-150 animate-in fade-in">
-                    <StationTopics
-                        stationId={selectedStation.id}
-                        stationName={selectedStation.stationName}
-                        className="shadow-xl"
-                    />
-                </div>
-            )}
+            {/* Map Layer Controls */}
+            <MapLayerControls
+                onTopicClick={handleTopicClick}
+                selectedTopicId={selectedTopicId}
+            />
 
             {/* Subtitle-style transcription */}
             {selectedStation &&
@@ -229,6 +179,17 @@ export function Globe({ stations }: GlobeProps) {
                         />
                     </div>
                 )}
+
+            {/* Station Topics panel - only shown when a station is selected */}
+            {selectedStation && (
+                <MapControls position="top-left">
+                    <StationTopics
+                        stationId={selectedStation.id}
+                        stationName={selectedStation.stationName}
+                        className="shadow-xl w-full max-w-xs"
+                    />
+                </MapControls>
+            )}
 
             {/* Radio player */}
             {selectedStation && (
@@ -258,6 +219,6 @@ export function Globe({ stations }: GlobeProps) {
                     Loading transcription data...
                 </div>
             )}
-        </>
+        </div>
     )
 }
