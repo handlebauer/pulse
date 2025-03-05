@@ -10,6 +10,7 @@
  * 5. Geolocate stations without location data
  *
  * The pipeline can be run in full or partially by specifying steps.
+ * You can also specify a custom path for preserved stations with --preserved-stations.
  */
 import ora from 'ora'
 import createLogger from '@/lib/logger'
@@ -56,12 +57,13 @@ const PIPELINES = {
 /**
  * Run a specific pipeline step
  */
-async function runStep(step: string) {
+async function runStep(step: string, preservedStationsPath?: string) {
     logger.info(`Running pipeline step: ${step}`)
 
     switch (step) {
         case STEPS.FETCH:
-            await fetchStations()
+            // Pass the preserved stations path to the fetch step
+            await fetchStations(preservedStationsPath)
             break
         case STEPS.CLASSIFY:
             await classifyStations()
@@ -70,7 +72,8 @@ async function runStep(step: string) {
             await validateAllStations()
             break
         case STEPS.FILTER:
-            await filterStations()
+            // Pass the preserved stations path to the filter step
+            await filterStations(preservedStationsPath)
             break
         case STEPS.GEOLOCATE:
             await geolocateStations()
@@ -84,14 +87,18 @@ async function runStep(step: string) {
 /**
  * Run a pipeline with the specified steps
  */
-async function runPipeline(steps: string[]) {
+async function runPipeline(steps: string[], preservedStationsPath?: string) {
     logger.info(`Starting pipeline with steps: ${steps.join(', ')}`)
+
+    if (preservedStationsPath) {
+        logger.info(`Using preserved stations from: ${preservedStationsPath}`)
+    }
 
     for (const step of steps) {
         const spinner = ora(`Running step: ${step}...`).start()
 
         try {
-            await runStep(step)
+            await runStep(step, preservedStationsPath)
             spinner.succeed(`Completed step: ${step}`)
         } catch (error) {
             spinner.fail(`Failed step: ${step}`)
@@ -109,6 +116,17 @@ async function runPipeline(steps: string[]) {
 async function main() {
     // Parse command line arguments
     const args = process.argv.slice(2)
+
+    // Check for preserved stations path
+    let preservedStationsPath: string | undefined
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--preserved-stations' && i + 1 < args.length) {
+            preservedStationsPath = args[i + 1]
+            // Remove these arguments so they don't interfere with pipeline selection
+            args.splice(i, 2)
+            break
+        }
+    }
 
     // Determine which pipeline to run
     let pipeline = PIPELINES.FULL
@@ -160,7 +178,7 @@ async function main() {
     }
 
     try {
-        await runPipeline(pipeline)
+        await runPipeline(pipeline, preservedStationsPath)
     } catch (error) {
         logger.error('Pipeline failed', error)
         process.exit(1)

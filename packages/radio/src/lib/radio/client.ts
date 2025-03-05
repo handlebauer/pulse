@@ -467,4 +467,50 @@ export class RadioBrowserAPI {
                 nameLower.includes(keyword) || tagsLower.includes(keyword),
         )
     }
+
+    /**
+     * Get stations by IDs
+     * @param stationIds Array of station IDs to fetch
+     */
+    async getStationsById(stationIds: string[]): Promise<RadioStation[]> {
+        if (!stationIds.length) {
+            return []
+        }
+
+        try {
+            // The radio-browser API doesn't have a direct endpoint to fetch stations by ID
+            // So we'll fetch them one by one
+            const stations: RadioStation[] = []
+
+            for (const stationId of stationIds) {
+                try {
+                    const rawStations = await this.makeRequest<
+                        RawRadioStation[]
+                    >('stations/byuuid/' + encodeURIComponent(stationId), 'GET')
+
+                    if (rawStations && rawStations.length > 0) {
+                        const station = this.transformStation(rawStations[0])
+                        stations.push(station)
+                    }
+                } catch (error) {
+                    console.error(
+                        `Error fetching station with ID ${stationId}:`,
+                        error,
+                    )
+                    // Continue with the next ID
+                }
+            }
+
+            // Add our custom fields for client-side filtering
+            return stations.map((station) => ({
+                ...station,
+                category: this.detectTalkStation(station) ? 'talk' : 'music',
+                subcategory: undefined, // We could add more sophisticated detection here
+                isLive: this.detectLiveBroadcast(station),
+            }))
+        } catch (error) {
+            console.error('Error fetching stations by IDs:', error)
+            return []
+        }
+    }
 }

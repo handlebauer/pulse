@@ -4,9 +4,10 @@
  *
  * This script fetches radio stations from the Radio Browser API
  * and saves them to a JSON file as the reference dataset.
+ * It also ensures that preserved stations are included regardless of filtering criteria.
  */
 import ora from 'ora'
-import { writeReferenceStations } from '@/lib/db'
+import { writeReferenceStations, readPreservedStations } from '@/lib/db'
 import createLogger from '@/lib/logger'
 import { defaultConfig } from '@/config'
 
@@ -17,29 +18,44 @@ const logger = createLogger('FetchStations')
 
 /**
  * Main function to fetch stations
+ * @param preservedStationsPath Optional custom path to the preserved stations file
  */
-async function main() {
+async function main(preservedStationsPath?: string) {
     logger.info('Starting station fetch process')
 
-    const spinner = ora('Fetching stations from Radio Browser API...').start()
-
     try {
-        // Fetch stations from the Radio Browser API
-        const stations = await fetchStationsData()
+        // Read the preserved station IDs first
+        const preservedSpinner = ora('Reading preserved station IDs...').start()
+        const preservedStationIds = await readPreservedStations(
+            preservedStationsPath,
+        )
 
-        spinner.succeed(
-            `Fetched ${stations.length} stations from Radio Browser API`,
+        if (preservedStationIds.length > 0) {
+            preservedSpinner.succeed(
+                `Found ${preservedStationIds.length} preserved station IDs${preservedStationsPath ? ` from ${preservedStationsPath}` : ''}`,
+            )
+        } else {
+            preservedSpinner.info('No preserved station IDs found')
+        }
+
+        // Fetch stations from the Radio Browser API
+        const fetchSpinner = ora(
+            'Fetching stations from Radio Browser API...',
+        ).start()
+        const stations = await fetchStationsData(preservedStationIds)
+        fetchSpinner.succeed(
+            `Fetched ${stations.length} stations from Radio Browser API${preservedStationIds.length ? ` (including ${preservedStationIds.length} preserved stations)` : ''}`,
         )
 
         // Save stations to reference JSON file
+        const saveSpinner = ora('Saving stations to reference file...').start()
         await writeReferenceStations(stations)
-
-        logger.success(`Fetch process completed successfully`)
-        logger.info(
+        saveSpinner.succeed(
             `Saved ${stations.length} stations to ${defaultConfig.paths.referenceStationsPath}`,
         )
+
+        logger.success(`Fetch process completed successfully`)
     } catch (error) {
-        spinner.fail('Failed to fetch stations')
         logger.error('Error fetching stations', error)
         process.exit(1)
     }
@@ -47,7 +63,17 @@ async function main() {
 
 // Run the main function if this file is executed directly
 if (import.meta.path === Bun.main) {
-    main().catch((error) => {
+    // Check for preserved stations path from command line
+    let preservedStationsPath: string | undefined
+    const args = process.argv.slice(2)
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--preserved-stations' && i + 1 < args.length) {
+            preservedStationsPath = args[i + 1]
+            break
+        }
+    }
+
+    main(preservedStationsPath).catch((error) => {
         logger.error('Unhandled error in main function', error)
         process.exit(1)
     })

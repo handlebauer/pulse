@@ -92,8 +92,11 @@ export function isEnglishStation(station: RadioStation): boolean {
 
 /**
  * Fetch stations data from the API
+ * @param preservedStationIds Optional array of station IDs that should be preserved and included in the results
  */
-export async function fetchStationsData(): Promise<RadioStation[]> {
+export async function fetchStationsData(
+    preservedStationIds: string[] = [],
+): Promise<RadioStation[]> {
     console.log('Initializing RadioBrowserAPI...')
     const api = new RadioBrowserAPI('PulseDataFetcher/1.0')
 
@@ -105,6 +108,13 @@ export async function fetchStationsData(): Promise<RadioStation[]> {
     const englishOnly = process.env.RADIO_BROWSER_ENGLISH_ONLY !== 'false' // Default to true
     const countryCodes =
         process.env.RADIO_BROWSER_COUNTRIES?.split(',') ?? DEFAULT_COUNTRIES
+
+    // Log if we have preserved station IDs
+    if (preservedStationIds.length) {
+        console.log(
+            `Including ${preservedStationIds.length} preserved stations regardless of filters`,
+        )
+    }
 
     console.log(
         `Fetching stations with minimum ${minVotes} votes ` +
@@ -124,6 +134,34 @@ export async function fetchStationsData(): Promise<RadioStation[]> {
     // We'll collect data in batches by country to ensure diversity
     let allStations: RadioStation[] = []
 
+    // FIRST: Fetch preserved stations if any
+    if (preservedStationIds.length > 0) {
+        console.log(
+            `Fetching ${preservedStationIds.length} preserved stations...`,
+        )
+        const preservedStations = await api.getStationsById(preservedStationIds)
+        console.log(
+            `Found ${preservedStations.length} preserved stations out of ${preservedStationIds.length} IDs`,
+        )
+
+        // Add them to the beginning of our stations array
+        allStations = [...preservedStations]
+
+        // Log any missing stations
+        if (preservedStations.length < preservedStationIds.length) {
+            const foundIds = preservedStations.map(
+                (station) => station.stationId,
+            )
+            const missingIds = preservedStationIds.filter(
+                (id) => !foundIds.includes(id),
+            )
+            console.log(
+                `Warning: Could not find ${missingIds.length} preserved stations: ${missingIds.join(', ')}`,
+            )
+        }
+    }
+
+    // THEN: Continue with normal fetching by country
     for (const countryCode of countryCodes) {
         console.log(`Fetching stations for country: ${countryCode}...`)
         countryStats[countryCode] = {
@@ -195,6 +233,7 @@ export async function fetchStationsData(): Promise<RadioStation[]> {
                     `])`,
             )
 
+            // Add to our accumulated stations
             allStations = [...allStations, ...validStations]
         } catch (error) {
             console.error(`Error fetching stations for ${countryCode}:`, error)

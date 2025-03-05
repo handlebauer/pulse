@@ -116,10 +116,10 @@ async function extractLocationWithLLM(
 ): Promise<string | null> {
     try {
         const genAI = new GoogleGenerativeAI(
-            defaultConfig.transcription.googleApiKey,
+            defaultConfig.transcription.google.apiKey,
         )
         const model = genAI.getGenerativeModel({
-            model: defaultConfig.transcription.model,
+            model: defaultConfig.transcription.google.model,
         })
 
         const prompt = `

@@ -46,6 +46,7 @@ The station data pipeline consists of five steps:
     - Input: Reads from `packages/web/scripts/db/stations.json`
     - Output: Writes to `packages/web/scripts/db/filtered-stations.json`
     - Current filters: Talk and news stations only
+    - Supports "preserved" stations: Stations that will never be filtered out, regardless of category
 
 You can run the full pipeline or individual steps:
 
@@ -148,8 +149,49 @@ bun run service:radio-pipeline
 - Output:
     - Creates audio segments in the configured directory
     - Transcribes audio in real-time
-    - Processes topics from transcriptions
-    - Updates topic trends and connections
+    - Processes topics from transcriptions in real-time
+
+### Preserved Stations
+
+The preserved stations feature allows you to specify a list of radio station IDs that should never be filtered out, regardless of their category, minimum votes, language, or other attributes. This is useful for ensuring that specific stations are always included in your dataset.
+
+These station IDs are respected at both the **fetch stage** (prior to any filtering) and the **filter stage**, ensuring that these stations always make it through the entire pipeline.
+
+To use this feature:
+
+1. Create a JSONC file (JSON with comments) containing an array of Radko Browser station IDs:
+
+```jsonc
+[
+    // WBEZ - Chicago Public Radio
+    "96186f9e-0601-11e8-ae97-52543be04c81",
+    // WABC - Talk radio from New York
+    "11ae85d0-df31-464c-9bb2-6c67dae8c935",
+]
+```
+
+2. Place this file at the path configured in your environment (default: `packages/web/scripts/db/preserved-stations.jsonc`), or specify a custom path when running the stations pipeline:
+
+```bash
+# When running the full stations pipeline
+bun run stations:pipeline --preserved-stations /path/to/preserved-stations.jsonc
+
+# When running just the fetch step
+bun run stations:pipeline fetch --preserved-stations /path/to/preserved-stations.jsonc
+
+# When running just the filter step
+bun run stations:pipeline filter --preserved-stations /path/to/preserved-stations.jsonc
+
+# When using the radio pipeline service
+bun run service:radio-pipeline --preserved-stations /path/to/preserved-stations.jsonc
+```
+
+The system will ensure these stations are:
+
+1. Fetched directly from the Radio Browser API even if they don't meet the minimum votes, language, or online status criteria
+2. Included in the final filtered dataset, even if they would normally be filtered out based on category or other criteria
+
+This feature works across the entire pipeline, from initial fetching to final filtering.
 
 ## Data Flow
 
