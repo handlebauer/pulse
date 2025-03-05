@@ -141,11 +141,19 @@ bun run service:orchestrator
 The enhanced radio pipeline service combines streaming, transcription, and topic processing:
 
 ```bash
-# Start the comprehensive radio pipeline service
+# Start the comprehensive radio pipeline service with all online stations
 bun run service:radio-pipeline
+
+# Test with a single specific station by ID
+bun run service:radio-pipeline --station STATION_ID1
+
+# Test with multiple specific stations by ID (can specify --station multiple times)
+bun run service:radio-pipeline --station STATION_ID1 --station STATION_ID2
+# or using the short form
+bun run service:radio-pipeline -s STATION_ID1 -s STATION_ID2
 ```
 
-- Input: Reads online stations from the database
+- Input: Reads online stations from the database (or specific stations if IDs are provided)
 - Output:
     - Creates audio segments in the configured directory
     - Transcribes audio in real-time

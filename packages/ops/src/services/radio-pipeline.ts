@@ -162,8 +162,10 @@ export async function createRadioPipeline(config: OpsConfig = defaultConfig) {
 
 /**
  * Main function to run the radio pipeline service
+ * @param options Optional parameters to configure the service
+ * @param options.stationIds Optional array of station IDs to test with specific stations
  */
-async function main() {
+async function main(options: { stationIds?: string[] } = {}) {
     logger.info('Starting Radio Pipeline Service')
 
     try {
@@ -182,10 +184,20 @@ async function main() {
 
         // Get online stations from the database
         const supabase = createSupabaseClient()
-        const { data: stations, error } = await supabase
+        let query = supabase
             .from('stations')
             .select('id, streamUrl, stationName')
             .eq('isOnline', true)
+
+        // Filter by station IDs if provided
+        if (options.stationIds && options.stationIds.length > 0) {
+            logger.info(
+                `Testing with specific station IDs: ${options.stationIds.join(', ')}`,
+            )
+            query = query.in('id', options.stationIds)
+        }
+
+        const { data: stations, error } = await query
         // .limit(5) // Start with a limited number for testing
 
         if (error) {
@@ -194,10 +206,18 @@ async function main() {
         }
 
         if (!stations || stations.length === 0) {
-            logger.warn('No online stations found in the database')
+            if (options.stationIds && options.stationIds.length > 0) {
+                logger.error(
+                    `No online stations found with the specified IDs: ${options.stationIds.join(', ')}`,
+                )
+            } else {
+                logger.warn('No online stations found in the database')
+            }
         } else {
             // Start streams for each station
-            logger.info(`Starting streams for ${stations.length} stations`)
+            logger.info(
+                `Starting streams for ${stations.length} station${stations.length === 1 ? '' : 's'}`,
+            )
 
             const stationData = stations.map((station) => ({
                 id: station.id,
@@ -208,7 +228,7 @@ async function main() {
             const stationIds = stations.map((station) => station.id)
             await radioPipeline.startMultipleStations(stationIds, stationData)
             logger.success(
-                `Started ${stations.length} streams with real-time topic processing`,
+                `Started ${stations.length} stream${stations.length === 1 ? '' : 's'} with real-time topic processing`,
             )
         }
 
@@ -234,7 +254,25 @@ async function main() {
 
 // Run the main function if this file is executed directly
 if (import.meta.path === Bun.main) {
-    main().catch((error) => {
+    // Parse command line arguments
+    const args = process.argv.slice(2)
+    const options: { stationIds?: string[] } = {}
+
+    // Look for --station or -s parameters, which can be provided multiple times
+    for (let i = 0; i < args.length; i++) {
+        if (
+            (args[i] === '--station' || args[i] === '-s') &&
+            i + 1 < args.length
+        ) {
+            if (!options.stationIds) {
+                options.stationIds = []
+            }
+            options.stationIds.push(args[i + 1])
+            i++ // Skip the next argument as it's the value
+        }
+    }
+
+    main(options).catch((error) => {
         logger.error('Unhandled error in main function', error)
         process.exit(1)
     })
