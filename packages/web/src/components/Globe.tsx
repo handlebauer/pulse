@@ -207,6 +207,7 @@ export function Globe({ stations }: GlobeProps) {
                 <div className="fixed top-6 left-6 max-w-xs w-full z-10 transition-all duration-150 animate-in fade-in">
                     <StationTopics
                         stationId={selectedStation.id}
+                        stationName={selectedStation.stationName}
                         className="shadow-xl"
                     />
                 </div>

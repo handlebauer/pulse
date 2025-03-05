@@ -2,27 +2,28 @@ import { useState, useEffect } from 'react'
 import { useStationTopics, StationTopicData } from '@/hooks/useStationTopics'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Radio } from 'lucide-react'
 
 interface StationTopicsProps {
     stationId: string | null
+    stationName?: string
     className?: string
     maxTopics?: number
 }
 
 export function StationTopics({
     stationId,
+    stationName,
     className,
     maxTopics = 5,
 }: StationTopicsProps) {
     const { topics, isLoading, error } = useStationTopics(stationId)
     const [visibleTopics, setVisibleTopics] = useState<StationTopicData[]>([])
 
-    // Display station ID in a nicely formatted way
-    const displayStationId = stationId
-        ? stationId.substring(0, 8) + '...'
-        : 'Unknown Station'
+    // Display station ID or name in a nicely formatted way
+    const displayStationInfo =
+        stationName ||
+        (stationId ? stationId.substring(0, 8) + '...' : 'Unknown Station')
 
     // Animate topics in and out when they change
     useEffect(() => {
@@ -42,41 +43,45 @@ export function StationTopics({
 
     if (error) {
         return (
-            <Card
+            <div
                 className={cn(
-                    'backdrop-blur-md bg-black/30 border-red-800/50 text-white shadow-xl',
+                    'backdrop-blur-md bg-black/30 border border-red-800/50 text-white shadow-xl rounded-lg overflow-hidden',
                     className,
                 )}
             >
-                <CardContent className="p-4">
+                <div className="p-4">
                     <div className="text-sm text-red-400 flex items-center">
-                        <Radio className="w-4 h-4 mr-2 text-red-500" />
+                        <Radio className="w-4 h-4 mr-3 text-red-500" />
                         Failed to load topics
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         )
     }
 
     return (
-        <Card
+        <div
             className={cn(
-                'backdrop-blur-md bg-black/30 border-gray-700/50 shadow-xl text-white',
+                'backdrop-blur-md bg-black/30 border border-gray-700/50 shadow-xl text-white rounded-lg overflow-hidden',
                 className,
             )}
         >
-            <CardHeader className="pb-2 border-b border-gray-700/30">
-                <CardTitle className="text-sm font-medium flex items-center text-gray-200">
-                    <Radio className="w-4 h-4 mr-2 text-indigo-500/90 animate-pulse" />
+            {/* Header section with improved spacing */}
+            <div className="py-3 px-5 border-b border-gray-700/30">
+                <div className="flex items-center text-gray-200">
                     <div className="flex flex-col">
-                        <span>Current Topics</span>
-                        <span className="text-xs font-normal text-gray-400 mt-0.5">
-                            Station {displayStationId}
+                        <span className="text-sm font-medium">
+                            Current Topics
+                        </span>
+                        <span className="text-xs font-normal text-gray-400 mt-1">
+                            {displayStationInfo}
                         </span>
                     </div>
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
+                </div>
+            </div>
+
+            {/* Content section */}
+            <div className="p-4">
                 <div className="flex flex-wrap gap-2">
                     {visibleTopics.map((topic) => (
                         <Badge
@@ -98,7 +103,7 @@ export function StationTopics({
                         </Badge>
                     ))}
                 </div>
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     )
 }

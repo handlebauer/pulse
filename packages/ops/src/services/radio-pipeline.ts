@@ -186,7 +186,7 @@ async function main() {
             .from('stations')
             .select('id, streamUrl, stationName')
             .eq('isOnline', true)
-            .limit(5) // Start with a limited number for testing
+        // .limit(5) // Start with a limited number for testing
 
         if (error) {
             logger.error('Failed to fetch stations from database', error)
