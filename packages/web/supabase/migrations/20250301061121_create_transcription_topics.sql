@@ -64,12 +64,18 @@ DECLARE
     v_match_text TEXT;
     v_context_before TEXT;
     v_context_after TEXT;
+    v_before_words TEXT[];
+    v_after_words TEXT[];
+    v_before_length INTEGER;
+    v_after_length INTEGER;
     v_start_time TIMESTAMPTZ := clock_timestamp();
     v_timeout_exceeded BOOLEAN := FALSE;
     v_timeout_seconds CONSTANT FLOAT := 10.0; -- Set timeout to 10 seconds
     v_mentions_batch JSONB := '[]'::JSONB;
     v_batch_size INTEGER := 0;
     v_max_batch_size CONSTANT INTEGER := 100; -- Process in batches of 100
+    v_text_before_match TEXT;
+    v_text_after_match TEXT;
 BEGIN
     -- Get the transcription data
     SELECT transcription INTO v_transcription_data
@@ -118,27 +124,31 @@ BEGIN
             -- Extract the actual match text (preserving original case)
             v_match_text := substring(v_segment_text from v_match_position for length(p_normalized_topic_name));
             
-            -- Get context before (up to 10 words)
-            v_context_before := substring(
-                v_segment_text from 1 for v_match_position - 1
-            );
-            -- Limit to last ~10 words
-            v_context_before := regexp_replace(
-                v_context_before, 
-                '^.*((?:\S+\s+){0,9}\S+)$', 
-                '\1'
-            );
+            -- Get text before and after the match
+            v_text_before_match := substring(v_segment_text from 1 for v_match_position - 1);
+            v_text_after_match := substring(v_segment_text from v_match_position + length(p_normalized_topic_name));
             
-            -- Get context after (up to 10 words)
-            v_context_after := substring(
-                v_segment_text from v_match_position + length(p_normalized_topic_name)
-            );
-            -- Limit to first ~10 words
-            v_context_after := regexp_replace(
-                v_context_after, 
-                '^((?:\S+\s+){0,10}).*$', 
-                '\1'
-            );
+            -- Split into arrays for word counting
+            v_before_words := string_to_array(trim(v_text_before_match), ' ');
+            v_after_words := string_to_array(trim(v_text_after_match), ' ');
+            
+            -- Get array lengths, handle NULL case
+            v_before_length := coalesce(array_length(v_before_words, 1), 0);
+            v_after_length := coalesce(array_length(v_after_words, 1), 0);
+            
+            -- Get context before (exactly last 10 words if available)
+            IF v_before_length > 10 THEN
+                v_context_before := array_to_string(v_before_words[v_before_length-9 : v_before_length], ' ');
+            ELSE
+                v_context_before := v_text_before_match;
+            END IF;
+            
+            -- Get context after (exactly first 10 words if available)
+            IF v_after_length > 10 THEN
+                v_context_after := array_to_string(v_after_words[1:10], ' ');
+            ELSE
+                v_context_after := v_text_after_match;
+            END IF;
             
             -- Add to batch instead of inserting immediately
             v_mentions_batch := v_mentions_batch || jsonb_build_object(

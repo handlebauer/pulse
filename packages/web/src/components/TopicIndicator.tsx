@@ -60,7 +60,7 @@ export function TopicIndicator({
         })
 
         audio.addEventListener('error', (e) => {
-            console.error('Audio error:', e)
+            console.warn('Audio error:', e)
             // Reset playing state
             setSoundbites((prev) =>
                 prev.map((sb) =>
