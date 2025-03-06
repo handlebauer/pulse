@@ -37,6 +37,7 @@ export function Globe({ stations }: GlobeProps) {
     const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
     const { topics: visibleTopics } = useTrendingTopics(10)
     const { currentlyPlayingStation } = useAudioPlayerContext()
+    const [topicStations, setTopicStations] = useState<string[]>([])
 
     useEffect(() => {
         if (!mapContainer.current) return
@@ -91,6 +92,9 @@ export function Globe({ stations }: GlobeProps) {
                     duration: 1000, // Animation duration in ms
                 })
             }
+
+            // Add a custom layer to visualize topic connections
+            addTopicConnectionsLayer(mapInstance)
         })
 
         return () => {
@@ -102,16 +106,236 @@ export function Globe({ stations }: GlobeProps) {
         }
     }, [stations])
 
+    // Add the topic connections visualization layer
+    const addTopicConnectionsLayer = (map: mapboxgl.Map) => {
+        // Add special layer for stations discussing a topic
+        map.addLayer({
+            id: 'topic-stations',
+            type: 'circle',
+            source: 'stations',
+            filter: ['!', ['has', 'point_count']], // Only for unclustered points
+            paint: {
+                'circle-radius': 10,
+                'circle-color': '#6366f1', // Indigo color matching the topic indicator
+                'circle-opacity': 0,
+                'circle-stroke-width': 3,
+                'circle-stroke-color': '#6366f1',
+                'circle-stroke-opacity': 0,
+            },
+        })
+
+        // Add pulsing effect layer
+        map.addLayer({
+            id: 'topic-stations-pulse',
+            type: 'circle',
+            source: 'stations',
+            filter: ['!', ['has', 'point_count']], // Only for unclustered points
+            paint: {
+                'circle-radius': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'pulse'],
+                    0,
+                    15,
+                    1,
+                    30,
+                ],
+                'circle-color': '#6366f1',
+                'circle-opacity': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'pulse'],
+                    0,
+                    0.4,
+                    1,
+                    0,
+                ],
+                'circle-stroke-width': 0,
+            },
+        })
+    }
+
+    // Update when selected topic changes
+    useEffect(() => {
+        const map = refs.current.map
+        if (!map) return
+
+        // Make sure the map style is loaded before modifying layers
+        if (!map.isStyleLoaded()) {
+            // Wait for the style to load before continuing
+            const waitForStyleLoad = () => {
+                // Need to get current reference to map since this runs asynchronously
+                const currentMap = refs.current.map
+                if (!currentMap) return
+
+                if (currentMap.isStyleLoaded()) {
+                    updateTopicVisuals(currentMap)
+                } else {
+                    // Try again in a short moment
+                    setTimeout(waitForStyleLoad, 50)
+                }
+            }
+            waitForStyleLoad()
+            return
+        }
+
+        updateTopicVisuals(map)
+
+        function updateTopicVisuals(map: mapboxgl.Map) {
+            // Get stations for the selected topic
+            if (selectedTopicId) {
+                const selectedTopic = visibleTopics.find(
+                    (t) => t.id === selectedTopicId,
+                )
+                if (selectedTopic && selectedTopic.recentStations) {
+                    // Get station IDs for this topic
+                    const stationIds = selectedTopic.recentStations.map(
+                        (s) => s.stationId,
+                    )
+                    setTopicStations(stationIds)
+
+                    // Update filters to show only stations discussing this topic
+                    map.setFilter('topic-stations', [
+                        'all',
+                        ['!', ['has', 'point_count']], // Exclude clusters
+                        ['in', ['get', 'id'], ['literal', stationIds]],
+                    ])
+
+                    map.setFilter('topic-stations-pulse', [
+                        'all',
+                        ['!', ['has', 'point_count']], // Exclude clusters
+                        ['in', ['get', 'id'], ['literal', stationIds]],
+                    ])
+
+                    // Show the topic stations layer with a fade-in animation
+                    map.setPaintProperty(
+                        'topic-stations',
+                        'circle-opacity',
+                        0.8,
+                    )
+                    map.setPaintProperty(
+                        'topic-stations',
+                        'circle-stroke-opacity',
+                        1,
+                    )
+
+                    // Add properties to stations for the pulsing effect
+                    const source = map.getSource(
+                        'stations',
+                    ) as mapboxgl.GeoJSONSource
+                    if (source) {
+                        const data = source.serialize()
+                            ?.data as GeoJSON.FeatureCollection
+
+                        if (data && data.features) {
+                            // Add pulse property to each station feature to enable animation
+                            data.features.forEach((feature) => {
+                                if (
+                                    feature.properties &&
+                                    stationIds.includes(feature.properties.id)
+                                ) {
+                                    feature.properties.pulse = 0 // Start value for animation
+                                }
+                            })
+
+                            source.setData(data)
+
+                            // Animate the pulse effect
+                            animatePulse(map, stationIds)
+                        }
+                    }
+
+                    // If there are at least 2 stations, try to show them all on screen
+                    if (stationIds.length >= 2) {
+                        fitMapToStations(map, stations, stationIds)
+                    }
+                }
+            } else {
+                // Reset filters when no topic is selected
+                setTopicStations([])
+
+                // Check if the layers exist before trying to modify them
+                if (map.getLayer('topic-stations')) {
+                    map.setPaintProperty('topic-stations', 'circle-opacity', 0)
+                    map.setPaintProperty(
+                        'topic-stations',
+                        'circle-stroke-opacity',
+                        0,
+                    )
+                }
+
+                // Clear the pulse animation
+                if (map.getLayer('topic-stations-pulse')) {
+                    map.setFilter('topic-stations-pulse', ['==', 'id', ''])
+                }
+            }
+        }
+    }, [selectedTopicId, visibleTopics, stations])
+
+    // Function to animate the pulsing effect
+    const animatePulse = (map: mapboxgl.Map, stationIds: string[]) => {
+        let animationFrame: number
+        let startTime: number | null = null
+
+        const animate = (timestamp: number) => {
+            if (!startTime) startTime = timestamp
+            const progress = ((timestamp - startTime) % 3000) / 3000 // 3-second loop
+
+            const source = map.getSource('stations') as mapboxgl.GeoJSONSource
+            if (source) {
+                const data = source.serialize()
+                    .data as GeoJSON.FeatureCollection
+                if (data && data.features) {
+                    data.features.forEach((feature) => {
+                        if (
+                            feature.properties &&
+                            stationIds.includes(feature.properties.id)
+                        ) {
+                            feature.properties.pulse = progress
+                        }
+                    })
+                    source.setData(data)
+                }
+            }
+
+            animationFrame = requestAnimationFrame(animate)
+        }
+
+        animationFrame = requestAnimationFrame(animate)
+
+        // Store the animation frame ID for cleanup
+        return () => {
+            cancelAnimationFrame(animationFrame)
+        }
+    }
+
+    // Function to fit map to show all stations discussing a topic
+    const fitMapToStations = (
+        map: mapboxgl.Map,
+        allStations: Station[],
+        stationIds: string[],
+    ) => {
+        const bounds = new mapboxgl.LngLatBounds()
+        let hasPoints = false
+
+        allStations.forEach((station) => {
+            if (stationIds.includes(station.id)) {
+                bounds.extend([station.longitude, station.latitude])
+                hasPoints = true
+            }
+        })
+
+        if (hasPoints) {
+            // Add some padding and animate the transition
+            map.fitBounds(bounds, {
+                padding: { top: 100, bottom: 100, left: 100, right: 100 },
+                duration: 1000,
+            })
+        }
+    }
+
     const handleTopicClick = (topicId: string) => {
         setSelectedTopicId((prevId) => (prevId === topicId ? null : topicId))
-
-        // When a topic is clicked, we could:
-        // 1. Highlight stations that discuss this topic
-        // 2. Pan/zoom to show these stations
-        // 3. Show visual connections between stations
-
-        // For now, we'll just highlight the topic in the UI
-        // Additional implementation would be part of Phase 3 in the TODO list
     }
 
     // Add a topic indicator when a topic is selected
@@ -125,6 +349,9 @@ export function Globe({ stations }: GlobeProps) {
 
         if (!selectedTopic) return null
 
+        // Get number of stations discussing this topic
+        const stationCount = topicStations.length
+
         return (
             <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-20 animate-in fade-in zoom-in-90 duration-300">
                 <div
@@ -134,7 +361,8 @@ export function Globe({ stations }: GlobeProps) {
                 >
                     <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse mr-1.5" />
                     <span className="text-sm">
-                        Viewing stations discussing{' '}
+                        Viewing {stationCount}{' '}
+                        {stationCount === 1 ? 'station' : 'stations'} discussing{' '}
                         <span className="font-medium text-indigo-400">
                             {selectedTopic.name}
                         </span>
