@@ -11,6 +11,19 @@ import dedent from 'dedent'
 type Transcription = Tables<'transcriptions'>
 
 /**
+ * Represents a segment in a transcription
+ */
+interface TranscriptionSegment {
+    caption: string
+    isCommercial?: boolean
+    isMusic?: boolean
+    startTime?: number
+    endTime?: number
+    // Using unknown instead of any for better type safety
+    [key: string]: string | number | boolean | undefined | unknown
+}
+
+/**
  * Input for text-based topic extraction without database dependency
  */
 export interface TextInput {
@@ -29,6 +42,20 @@ export interface Topic {
     name: string
     normalizedName: string
     relevanceScore: number
+}
+
+/**
+ * Represents a topic mention with its context
+ */
+export interface TopicMention {
+    topicId: string
+    transcriptionId: string
+    matchText: string
+    contextBefore: string
+    contextAfter: string
+    segmentIndex: number
+    position: number
+    confidence: number
 }
 
 /**
@@ -288,21 +315,25 @@ export class TopicExtractor extends CoreTopicExtractor {
 
                 // 3. Find and save topic mentions in the transcription
                 if (transcriptionId) {
-                    const { error: findMentionError } = await this.dbClient.rpc(
-                        'find_topic_mentions',
-                        {
-                            p_transcription_id: transcriptionId,
-                            p_topic_id: topicId,
-                            p_topic_name: topic.name,
-                            p_normalized_topic_name: topic.normalizedName,
-                        },
-                    )
+                    try {
+                        // Get the transcription data
+                        const { data: transcriptionData } = await this.dbClient
+                            .from('transcriptions')
+                            .select('*')
+                            .eq('id', transcriptionId)
+                            .single()
 
-                    if (findMentionError) {
-                        console.error(
-                            'Error finding topic mentions:',
-                            findMentionError,
-                        )
+                        if (transcriptionData) {
+                            // Process the mentions using our new TypeScript method
+                            await this.processTopicMentions(
+                                transcriptionData,
+                                topicId,
+                                topic.name,
+                                topic.normalizedName,
+                            )
+                        }
+                    } catch (error) {
+                        console.error('Error finding topic mentions:', error)
                     }
                 }
             } catch (error) {
@@ -447,5 +478,188 @@ export class TopicExtractor extends CoreTopicExtractor {
         }
 
         return this.processTranscriptionBatch(transcriptions)
+    }
+
+    /**
+     * Find all mentions of a topic in a transcription with surrounding context
+     *
+     * @param transcription - The transcription object from the database
+     * @param topicId - The database ID of the topic
+     * @param topicName - The display name of the topic
+     * @param normalizedName - The normalized name for case-insensitive matching
+     * @returns Array of topic mentions with context
+     */
+    async findTopicMentions(
+        transcription: Transcription,
+        topicId: string,
+        normalizedName: string,
+    ): Promise<TopicMention[]> {
+        if (
+            !transcription.transcription ||
+            !Array.isArray(transcription.transcription)
+        ) {
+            return []
+        }
+
+        const mentions: TopicMention[] = []
+        const segments = transcription.transcription as TranscriptionSegment[]
+
+        // Create a regex with word boundaries
+        const topicRegex = new RegExp(`\\b${normalizedName}\\b`, 'gi')
+
+        // Process each segment of the transcription
+        for (
+            let segmentIndex = 0;
+            segmentIndex < segments.length;
+            segmentIndex++
+        ) {
+            const segment = segments[segmentIndex]
+
+            // Skip if no caption or marked as commercial/music
+            if (!segment?.caption || segment.isCommercial || segment.isMusic) {
+                continue
+            }
+
+            const segmentText = segment.caption
+            let match: RegExpExecArray | null
+
+            // Find each match in the segment
+            while (
+                (match = topicRegex.exec(segmentText.toLowerCase())) !== null
+            ) {
+                const matchPosition = match.index
+                const matchLength = match[0].length
+
+                // Get the actual match text (preserving original case)
+                const matchText = segmentText.substring(
+                    matchPosition,
+                    matchPosition + matchLength,
+                )
+
+                // Get text before and after the match
+                const textBeforeMatch = segmentText.substring(0, matchPosition)
+                const textAfterMatch = segmentText.substring(
+                    matchPosition + matchLength,
+                )
+
+                // Split into words
+                const beforeWords = textBeforeMatch.trim().split(/\s+/)
+                const afterWords = textAfterMatch.trim().split(/\s+/)
+
+                // Get exactly 10 words of context (or all if less than 10)
+                let contextBefore = ''
+                if (beforeWords.length > 10) {
+                    contextBefore = beforeWords
+                        .slice(beforeWords.length - 10)
+                        .join(' ')
+                    // Ensure we preserve the trailing space if it existed
+                    if (textBeforeMatch.endsWith(' ')) {
+                        contextBefore += ' '
+                    }
+                } else {
+                    // Keep all text but ensure trailing space is preserved
+                    contextBefore = textBeforeMatch.trimStart()
+                }
+
+                let contextAfter = ''
+                if (afterWords.length > 10) {
+                    contextAfter = afterWords.slice(0, 10).join(' ')
+                    // Ensure we preserve the trailing space if needed
+                    if (
+                        afterWords.length > 10 &&
+                        afterWords[10].startsWith(' ')
+                    ) {
+                        contextAfter += ' '
+                    }
+                } else {
+                    // Keep all text but ensure leading space is preserved
+                    contextAfter = textAfterMatch.trimEnd()
+                }
+
+                // Create the mention object
+                const mention: TopicMention = {
+                    topicId,
+                    transcriptionId: transcription.id,
+                    matchText,
+                    contextBefore,
+                    contextAfter,
+                    segmentIndex,
+                    position: matchPosition,
+                    confidence: 1.0,
+                }
+
+                mentions.push(mention)
+            }
+        }
+
+        return mentions
+    }
+
+    /**
+     * Save topic mentions to the database
+     *
+     * @param mentions - Array of topic mentions to save
+     */
+    async saveTopicMentions(mentions: TopicMention[]): Promise<void> {
+        if (mentions.length === 0) {
+            return
+        }
+
+        try {
+            // Process in batches to avoid overloading the database
+            const batchSize = 100
+            for (let i = 0; i < mentions.length; i += batchSize) {
+                const batch = mentions.slice(i, i + batchSize)
+
+                // Simply insert mentions without worrying about conflicts
+                const { error } = await this.dbClient
+                    .from('transcription_topics')
+                    .insert(
+                        batch.map((mention) => ({
+                            transcriptionId: mention.transcriptionId,
+                            topicId: mention.topicId,
+                            matchText: mention.matchText,
+                            contextBefore: mention.contextBefore,
+                            contextAfter: mention.contextAfter,
+                            segmentIndex: mention.segmentIndex,
+                            position: mention.position,
+                            confidence: mention.confidence,
+                        })),
+                    )
+
+                if (error) {
+                    console.error('Error inserting topic mentions:', error)
+                }
+            }
+        } catch (error) {
+            console.error('Exception while saving topic mentions:', error)
+        }
+    }
+
+    /**
+     * Process topic mentions for a given transcription and topic
+     *
+     * @param transcription - The transcription object
+     * @param topicId - The database ID of the topic
+     * @param topicName - The display name of the topic
+     * @param normalizedName - The normalized name for matching
+     */
+    async processTopicMentions(
+        transcription: Transcription,
+        topicId: string,
+        topicName: string,
+        normalizedName: string,
+    ): Promise<number> {
+        // Find all mentions of the topic
+        const mentions = await this.findTopicMentions(
+            transcription,
+            topicId,
+            normalizedName,
+        )
+
+        // Save mentions to the database
+        await this.saveTopicMentions(mentions)
+
+        return mentions.length
     }
 }

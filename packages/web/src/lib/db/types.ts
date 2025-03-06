@@ -829,15 +829,6 @@ export type Database = {
                 }
                 Returns: boolean
             }
-            find_topic_mentions: {
-                Args: {
-                    p_transcription_id: string
-                    p_topic_id: string
-                    p_topic_name: string
-                    p_normalized_topic_name: string
-                }
-                Returns: undefined
-            }
             geography:
                 | {
                       Args: {
