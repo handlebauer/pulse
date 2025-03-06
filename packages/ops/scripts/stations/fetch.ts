@@ -5,6 +5,12 @@
  * This script fetches radio stations from the Radio Browser API
  * and saves them to a JSON file as the reference dataset.
  * It also ensures that preserved stations are included regardless of filtering criteria.
+ *
+ * Workflow:
+ * 1. Reads preserved station IDs (optional)
+ * 2. Fetches stations from Radio Browser API
+ * 3. Saves the fetched stations to reference-stations.json
+ * 4. Next step: Run classify.ts to classify stations and save to stations.json
  */
 import ora from 'ora'
 import { writeReferenceStations, readPreservedStations } from '@/lib/db'

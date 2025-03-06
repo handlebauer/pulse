@@ -119,17 +119,23 @@
 - [ ] Connection Data Management (in @pulse/web)
 
     - [ ] Create `useTopicConnections` hook
+        - _Note: May be unnecessary as TrendingTopics already includes station data for each topic_
     - [ ] Implement filtering and sorting of connections
-    - [ ] Add connection toggling functionality
+    - [~] Add connection toggling functionality
+        - _Note: Basic topic selection exists in Globe.tsx's handleTopicClick but needs expansion_
     - [ ] Set up realtime updates for connections
+        - _Note: Can likely leverage existing realtime infrastructure_
 
 - [ ] Connection Visualization (in @pulse/web)
 
     - [ ] Create `TopicConnections` component
+        - _Note: Could potentially integrate this into existing Globe component_
     - [ ] Implement MapboxGL line drawing for connections
+        - _Note: Globe.tsx already uses MapboxGL, so foundation exists_
     - [ ] Add styles based on connection strength
     - [ ] Create controls for toggling connection visibility
     - [ ] Add hover interactions to show connection details
+        - _Note: Map popup mechanism already exists in Globe.tsx_
 
 - [ ] Visual Effects (in @pulse/web)
     - [ ] Implement animated/dashed lines for connections

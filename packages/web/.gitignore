@@ -1,9 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # seed data
-scripts/db/stations.json
-scripts/db/reference-stations.json
-scripts/db/preserved-stations.jsonc
+scripts/db/*.json
 
 # dependencies
 /node_modules

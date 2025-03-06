@@ -4,10 +4,15 @@
  *
  * This script classifies radio stations using AI
  * and saves the results to a JSON file.
+ *
+ * Workflow:
+ * 1. Reads stations from reference-stations.json (created by fetch.ts)
+ * 2. Classifies each station using AI
+ * 3. Saves the classified stations to stations.json
  */
 import ora from 'ora'
 import dedent from 'dedent'
-import { readStationsFromFile, writeStationsToFile } from '@/lib/db'
+import { readReferenceStations, writeStationsToFile } from '@/lib/db'
 import createLogger from '@/lib/logger'
 
 const logger = createLogger('ClassifyStations')
@@ -245,7 +250,7 @@ export async function classifyStations(
                 // Save progress after each batch
                 await writeStationsToFile(allStations)
                 logger.info(
-                    `Progress: ${processedCount}/${allStations.length} stations classified (${Math.round((processedCount / allStations.length) * 100)}%)`,
+                    `Progress: ${processedCount}/${allStations.length} stations classified (${Math.round((processedCount / allStations.length) * 100)}%) - Saved to stations.json`,
                 )
             } else {
                 logger.warn(
@@ -291,14 +296,18 @@ async function main() {
     logger.info('Starting station classification process')
 
     // Read stations from JSON file
-    const spinner = ora('Reading stations from file...').start()
+    const spinner = ora(
+        'Reading stations from reference-stations.json...',
+    ).start()
     let stations
 
     try {
-        stations = await readStationsFromFile()
-        spinner.succeed(`Read ${stations.length} stations from file`)
+        stations = await readReferenceStations()
+        spinner.succeed(
+            `Read ${stations.length} stations from reference-stations.json`,
+        )
     } catch (error) {
-        spinner.fail('Failed to read stations from file')
+        spinner.fail('Failed to read stations from reference-stations.json')
         logger.error('Error reading stations', error)
         process.exit(1)
     }
@@ -317,7 +326,9 @@ async function main() {
         // Save classified stations to JSON file
         await writeStationsToFile(classifiedStations)
 
-        logger.success(`Classification process completed successfully`)
+        logger.success(
+            `Classification process completed successfully. Results saved to stations.json`,
+        )
     } catch (error) {
         classifySpinner.fail('Failed to classify stations')
         logger.error('Error classifying stations', error)

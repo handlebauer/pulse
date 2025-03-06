@@ -20,6 +20,7 @@
         "@radix-ui/react-slider": "^1.2.3",
         "@radix-ui/react-slot": "^1.1.2",
         "@supabase/ssr": "^0.5.2",
+        "@turf/turf": "^7.2.0",
         "@types/mapbox-gl": "^3.4.1",
         "@vercel/kv": "^3.0.0",
         "class-variance-authority": "^0.7.1",
@@ -33,7 +34,8 @@
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "tailwind-merge": "^3.0.2",
-        "tailwindcss-animate": "^1.0.7"
+        "tailwindcss-animate": "^1.0.7",
+        "threebox-plugin": "^2.2.7"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3",
