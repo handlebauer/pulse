@@ -15,7 +15,6 @@
       "name": "@pulse/ops",
       "version": "0.0.1",
       "dependencies": {
-        "@google/generative-ai": "^0.22.0",
         "@pulse/radio": "workspace:*",
         "cheerio": "^1.0.0-rc.12",
         "cron": "^4.1.0",
@@ -36,7 +35,6 @@
       "name": "@pulse/radio",
       "version": "1.0.0",
       "dependencies": {
-        "@google/generative-ai": "^0.22.0",
         "@supabase/supabase-js": "^2.49.1",
         "dedent": "^1.5.3",
         "dotenv": "^16.4.5",
@@ -170,8 +168,6 @@
     "@eslint/object-schema": ["@eslint/object-schema@2.1.6", "", {}, "sha512-RBMg5FRL0I0gs51M/guSAj5/e14VQ4tpZnQNWwuDT66P14I43ItmPfIZRhO9fUVIPOAQXU47atlywZ/czoqFPA=="],
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.2.7", "", { "dependencies": { "@eslint/core": "^0.12.0", "levn": "^0.4.1" } }, "sha512-JubJ5B2pJ4k4yGxaNLdbjrnk9d/iDz6/q8wOilpIowd6PJPgaxCuHBnBszq7Ce2TyMrywm5r4PnKm6V3iiZF+g=="],
-
-    "@google/generative-ai": ["@google/generative-ai@0.22.0", "", {}, "sha512-mLR3PDWCk5O/BWNyDvFDIiwKeXQmFGZ+kJFd9m73QrUPCFREttJyVbBPTW4y9CwTbaltLMDaLDfroCrRv5Bl8Q=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.1", "", {}, "sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA=="],
 

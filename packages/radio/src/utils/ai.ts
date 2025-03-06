@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { OpenAI } from 'openai'
 import { zodResponseFormat } from 'openai/helpers/zod'
 import type { TopicExtractionConfig } from '@/lib/config/types'
