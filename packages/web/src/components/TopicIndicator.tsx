@@ -70,7 +70,7 @@ export function TopicIndicator({
                 audio.src = ''
             })
         }
-    }, [soundbites])
+    }, [soundbites, audioElements])
 
     const togglePlay = (soundbiteId: string) => {
         // Stop all currently playing audio
