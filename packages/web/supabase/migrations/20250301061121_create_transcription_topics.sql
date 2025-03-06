@@ -64,8 +64,12 @@ DECLARE
     v_match_text TEXT;
     v_context_before TEXT;
     v_context_after TEXT;
-    v_word_pattern TEXT;
-    v_word_boundary TEXT := '([^\w]|^|$)'; -- Word boundary pattern for case insensitive whole word search
+    v_start_time TIMESTAMPTZ := clock_timestamp();
+    v_timeout_exceeded BOOLEAN := FALSE;
+    v_timeout_seconds CONSTANT FLOAT := 10.0; -- Set timeout to 10 seconds
+    v_mentions_batch JSONB := '[]'::JSONB;
+    v_batch_size INTEGER := 0;
+    v_max_batch_size CONSTANT INTEGER := 100; -- Process in batches of 100
 BEGIN
     -- Get the transcription data
     SELECT transcription INTO v_transcription_data
@@ -77,12 +81,15 @@ BEGIN
         RETURN;
     END IF;
     
-    -- Prepare the word pattern for whole word search (accounting for word boundaries)
-    -- This makes "biden" match "Biden" but not "forbidden"
-    v_word_pattern := v_word_boundary || p_normalized_topic_name || v_word_boundary;
-    
     -- Loop through each segment in the transcription
     FOR v_segment_index IN 0..jsonb_array_length(v_transcription_data) - 1 LOOP
+        -- Check for timeout
+        IF extract(epoch FROM (clock_timestamp() - v_start_time)) > v_timeout_seconds THEN
+            RAISE NOTICE 'Timeout exceeded while processing topic mentions for transcription %', p_transcription_id;
+            v_timeout_exceeded := TRUE;
+            EXIT; -- Exit the loop
+        END IF;
+        
         -- Get the segment
         v_segment := v_transcription_data->v_segment_index;
         
@@ -99,7 +106,14 @@ BEGIN
         v_match_position := position(lower(p_normalized_topic_name) in lower(v_segment_text));
         
         -- If found, extract the match and context
-        WHILE v_match_position > 0 LOOP
+        WHILE v_match_position > 0 AND NOT v_timeout_exceeded LOOP
+            -- Check for timeout inside inner loop too
+            IF extract(epoch FROM (clock_timestamp() - v_start_time)) > v_timeout_seconds THEN
+                RAISE NOTICE 'Timeout exceeded while processing topic mentions for transcription %', p_transcription_id;
+                v_timeout_exceeded := TRUE;
+                EXIT;
+            END IF;
+            
             -- Extract the actual match text (preserving original case)
             v_match_text := substring(v_segment_text from v_match_position for length(p_normalized_topic_name));
             
@@ -125,26 +139,48 @@ BEGIN
                 '\1'
             );
             
-            -- Insert the mention
-            INSERT INTO public.transcription_topics (
-                "transcriptionId",
-                "topicId",
-                "matchText",
-                "contextBefore",
-                "contextAfter",
-                "segmentIndex",
-                "position",
-                "confidence"
-            ) VALUES (
-                p_transcription_id,
-                p_topic_id,
-                v_match_text,
-                v_context_before,
-                v_context_after,
-                v_segment_index,
-                v_match_position,
-                1.0 -- Set a default confidence
+            -- Add to batch instead of inserting immediately
+            v_mentions_batch := v_mentions_batch || jsonb_build_object(
+                'transcriptionId', p_transcription_id,
+                'topicId', p_topic_id,
+                'matchText', v_match_text,
+                'contextBefore', v_context_before,
+                'contextAfter', v_context_after,
+                'segmentIndex', v_segment_index,
+                'position', v_match_position,
+                'confidence', 1.0
             );
+            
+            v_batch_size := v_batch_size + 1;
+            
+            -- Process batch if we've hit the max batch size
+            IF v_batch_size >= v_max_batch_size THEN
+                -- Bulk insert the batch
+                INSERT INTO public.transcription_topics (
+                    "transcriptionId",
+                    "topicId",
+                    "matchText",
+                    "contextBefore",
+                    "contextAfter",
+                    "segmentIndex",
+                    "position",
+                    "confidence"
+                )
+                SELECT 
+                    (x->>'transcriptionId')::UUID,
+                    (x->>'topicId')::UUID,
+                    x->>'matchText',
+                    x->>'contextBefore',
+                    x->>'contextAfter',
+                    (x->>'segmentIndex')::INTEGER,
+                    (x->>'position')::INTEGER,
+                    (x->>'confidence')::FLOAT
+                FROM jsonb_array_elements(v_mentions_batch) x;
+                
+                -- Reset the batch
+                v_mentions_batch := '[]'::JSONB;
+                v_batch_size := 0;
+            END IF;
             
             -- Find next mention after this one
             v_match_position := position(
@@ -158,6 +194,36 @@ BEGIN
             END IF;
         END LOOP;
     END LOOP;
+    
+    -- Process any remaining mentions in the batch
+    IF v_batch_size > 0 THEN
+        INSERT INTO public.transcription_topics (
+            "transcriptionId",
+            "topicId",
+            "matchText",
+            "contextBefore",
+            "contextAfter",
+            "segmentIndex",
+            "position",
+            "confidence"
+        )
+        SELECT 
+            (x->>'transcriptionId')::UUID,
+            (x->>'topicId')::UUID,
+            x->>'matchText',
+            x->>'contextBefore',
+            x->>'contextAfter',
+            (x->>'segmentIndex')::INTEGER,
+            (x->>'position')::INTEGER,
+            (x->>'confidence')::FLOAT
+        FROM jsonb_array_elements(v_mentions_batch) x;
+    END IF;
+    
+    -- Log if we had to stop early due to timeout
+    IF v_timeout_exceeded THEN
+        RAISE LOG 'Incomplete topic processing for transcription % and topic % due to timeout', 
+            p_transcription_id, p_topic_name;
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
 
