@@ -54,6 +54,8 @@ export interface OpsConfig {
         validateStreamsInterval: number // in minutes
         topicsInterval: number // in minutes
         realtimeTopics: boolean
+        trendUpdateMultiplier: number // how many segments to wait before updating trends (0 to disable)
+        connectionsUpdateMultiplier: number // how many segments to wait before updating connections (0 to disable)
     }
 
     // Stream orchestrator configuration
@@ -129,6 +131,14 @@ export const defaultConfig: OpsConfig = {
         topicsInterval: parseInt(process.env.TOPICS_INTERVAL || '1', 10), // Default to 1 minute for near real-time updates
         realtimeTopics:
             process.env.ENABLE_REALTIME_TOPIC_PROCESSING !== 'false', // Default to true
+        trendUpdateMultiplier: parseInt(
+            process.env.TREND_UPDATE_MULTIPLIER || '4',
+            10,
+        ), // Default to updating trends every 4 segments
+        connectionsUpdateMultiplier: parseInt(
+            process.env.CONNECTIONS_UPDATE_MULTIPLIER || '8',
+            10,
+        ), // Default to updating connections every 8 segments
     },
 
     streamOrchestrator: {

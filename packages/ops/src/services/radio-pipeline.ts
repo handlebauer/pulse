@@ -20,6 +20,15 @@ const logger = createLogger('RadioPipeline')
 /**
  * Creates a comprehensive radio pipeline service that handles streaming,
  * transcription, and real-time topic processing
+ *
+ * Topic Processing Configuration:
+ * - Set config.scheduling.realtimeTopics to false to completely disable real-time topic processing
+ * - Set config.scheduling.trendUpdateMultiplier to control how often trend updates occur:
+ *   - Value is a multiplier of the defaultSegmentLength (e.g., 4 means update every 4 segments)
+ *   - Set to 0 to disable trend updates in real-time processing
+ * - Set config.scheduling.connectionsUpdateMultiplier to control how often connection updates occur:
+ *   - Value is a multiplier of the defaultSegmentLength (e.g., 8 means update every 8 segments)
+ *   - Set to 0 to disable connection updates in real-time processing
  */
 export async function createRadioPipeline(config: OpsConfig = defaultConfig) {
     // Create the base orchestrator instance
@@ -41,6 +50,19 @@ export async function createRadioPipeline(config: OpsConfig = defaultConfig) {
     // Flag to track if the realtime subscription is active
     let isListening = false
 
+    // For tracking trend and connection updates based on segment intervals
+    let transcriptionCounter = 0
+    let lastTrendUpdateTime = Date.now()
+    let lastConnectionUpdateTime = Date.now()
+
+    // Calculate trend update intervals in milliseconds
+    const segmentLengthMs =
+        config.streamOrchestrator.defaultSegmentLength * 1000
+    const trendUpdateIntervalMs =
+        segmentLengthMs * config.scheduling.trendUpdateMultiplier
+    const connectionsUpdateIntervalMs =
+        segmentLengthMs * config.scheduling.connectionsUpdateMultiplier
+
     /**
      * Start listening for new transcriptions and process topics in real-time
      */
@@ -51,6 +73,30 @@ export async function createRadioPipeline(config: OpsConfig = defaultConfig) {
         }
 
         logger.info('Starting real-time topic processing')
+
+        // Reset counters when starting
+        transcriptionCounter = 0
+        lastTrendUpdateTime = Date.now()
+        lastConnectionUpdateTime = Date.now()
+
+        // If trend or connection updates are disabled (multiplier set to 0), log it
+        if (config.scheduling.trendUpdateMultiplier <= 0) {
+            logger.info('Trend updates are disabled in real-time processing')
+        } else {
+            logger.info(
+                `Trend updates will occur every ${config.scheduling.trendUpdateMultiplier} segments (${trendUpdateIntervalMs / 1000} seconds)`,
+            )
+        }
+
+        if (config.scheduling.connectionsUpdateMultiplier <= 0) {
+            logger.info(
+                'Topic connection updates are disabled in real-time processing',
+            )
+        } else {
+            logger.info(
+                `Topic connection updates will occur every ${config.scheduling.connectionsUpdateMultiplier} segments (${connectionsUpdateIntervalMs / 1000} seconds)`,
+            )
+        }
 
         // Subscribe to the transcriptions table
         subscription = supabase
@@ -75,12 +121,23 @@ export async function createRadioPipeline(config: OpsConfig = defaultConfig) {
                     )
 
                     try {
-                        // Process topics for this transcription
-                        // Only update trends and connections occasionally to avoid overloading the database
-                        // Use a simple 1/5 chance for updating trends and connections
-                        const shouldUpdateTrends = Math.random() < 0.2
-                        const shouldUpdateConnections = Math.random() < 0.2
+                        // Increment transcription counter
+                        transcriptionCounter++
+                        const currentTime = Date.now()
 
+                        // Determine if we should update trends based on time interval
+                        const shouldUpdateTrends =
+                            config.scheduling.trendUpdateMultiplier > 0 &&
+                            currentTime - lastTrendUpdateTime >=
+                                trendUpdateIntervalMs
+
+                        // Determine if we should update connections based on time interval
+                        const shouldUpdateConnections =
+                            config.scheduling.connectionsUpdateMultiplier > 0 &&
+                            currentTime - lastConnectionUpdateTime >=
+                                connectionsUpdateIntervalMs
+
+                        // Process topics for this transcription
                         const topicCount = await processTranscriptionTopics(
                             transcriptionId,
                             shouldUpdateTrends,
@@ -93,13 +150,19 @@ export async function createRadioPipeline(config: OpsConfig = defaultConfig) {
                             `Processed ${topicCount} topics for transcription ${transcriptionId}`,
                         )
 
-                        // Log when trends or connections are updated
+                        // Update timestamps if trends or connections were updated
                         if (shouldUpdateTrends) {
-                            logger.info('Updated trending topics')
+                            lastTrendUpdateTime = currentTime
+                            logger.info(
+                                `Updated trending topics (interval: ${config.scheduling.trendUpdateMultiplier} segments)`,
+                            )
                         }
 
                         if (shouldUpdateConnections) {
-                            logger.info('Updated topic connections')
+                            lastConnectionUpdateTime = currentTime
+                            logger.info(
+                                `Updated topic connections (interval: ${config.scheduling.connectionsUpdateMultiplier} segments)`,
+                            )
                         }
                     } catch (error) {
                         logger.error(
@@ -174,8 +237,36 @@ async function main(options: { stationIds?: string[] } = {}) {
 
         // Start real-time topic processing if enabled in config
         if (defaultConfig.scheduling.realtimeTopics) {
-            radioPipeline.startTopicProcessing()
-            logger.info('Real-time topic processing enabled')
+            // Check if at least one of the update functions is enabled
+            const trendUpdatesEnabled =
+                defaultConfig.scheduling.trendUpdateMultiplier > 0
+            const connectionUpdatesEnabled =
+                defaultConfig.scheduling.connectionsUpdateMultiplier > 0
+
+            if (trendUpdatesEnabled || connectionUpdatesEnabled) {
+                radioPipeline.startTopicProcessing()
+                logger.info('Real-time topic processing enabled')
+
+                if (!trendUpdatesEnabled) {
+                    logger.info(
+                        'Note: Trend updates are disabled but will still process topics',
+                    )
+                }
+
+                if (!connectionUpdatesEnabled) {
+                    logger.info(
+                        'Note: Connection updates are disabled but will still process topics',
+                    )
+                }
+            } else {
+                logger.info(
+                    'Real-time topic processing enabled, but both trend and connection updates are disabled (multipliers set to 0)',
+                )
+                logger.info(
+                    'Topics will be extracted but no trend/connection updates will occur in real-time',
+                )
+                radioPipeline.startTopicProcessing()
+            }
         } else {
             logger.info(
                 'Real-time topic processing disabled (using scheduled processing only)',

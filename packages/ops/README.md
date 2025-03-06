@@ -80,10 +80,42 @@ Process transcriptions to extract topics and update topic trends:
 ```bash
 # Process topics from transcriptions
 bun run topics:process
+
+# Process with specific options
+bun run topics:process --minutes 10 --limit 50  # Process last 10 minutes, max 50 transcriptions
+bun run topics:process --skip-trends            # Process topics but don't update trends
+bun run topics:process --skip-connections       # Process topics but don't update connections
 ```
 
 - Input: Reads transcriptions from the database
 - Output: Extracts topics and updates the topics table in the database
+- Options:
+    - `--minutes` or `-m`: Process transcriptions from the last X minutes (default: 15)
+    - `--limit` or `-l`: Maximum number of transcriptions to process (default: 100)
+    - `--skip-trends`: Skip updating trending topics
+    - `--skip-connections`: Skip updating topic connections
+
+### Real-time Topic Processing Configuration
+
+When using the Radio Pipeline Service, topic processing can be configured in several ways:
+
+1. **Disable real-time processing completely**:
+
+    - Set `ENABLE_REALTIME_TOPIC_PROCESSING=false` in your .env file
+    - This will disable all real-time topic processing, only using scheduled processing
+
+2. **Configure trend update frequency**:
+
+    - Set `TREND_UPDATE_MULTIPLIER` to control how often trending topics are updated
+    - This value is a multiplier of the segment length (e.g., if segments are 30 seconds, a value of 4 updates trends every 2 minutes)
+    - Set to 0 to disable real-time trend updates (topics will still be extracted)
+
+3. **Configure connection update frequency**:
+    - Set `CONNECTIONS_UPDATE_MULTIPLIER` to control how often topic connections are updated
+    - This works the same way as the trend multiplier
+    - Set to 0 to disable real-time connection updates
+
+This time-based approach replaces the previous random chance method, providing more predictable and configurable updates.
 
 ### Scheduled Services
 
@@ -226,6 +258,10 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Scheduling
 VALIDATE_STREAMS_INTERVAL=5  # in minutes
+TOPICS_INTERVAL=1            # in minutes
+ENABLE_REALTIME_TOPIC_PROCESSING=true  # enable real-time topic processing
+TREND_UPDATE_MULTIPLIER=4    # update trends every N segments
+CONNECTIONS_UPDATE_MULTIPLIER=8  # update connections every N segments
 
 # Logging
 LOG_LEVEL=1  # 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR
