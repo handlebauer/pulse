@@ -1,6 +1,4 @@
-import mapboxgl from 'mapbox-gl'
 import { Station } from './types'
-import { stationLayerStyle, stationHitAreaStyle } from './styles'
 
 // Helper function to create a small offset for stations with the same coordinates
 const createSpreadCoordinates = (
@@ -124,7 +122,7 @@ export const addStationLayers = (map: mapboxgl.Map, stations: Station[]) => {
         source: 'stations',
         filter: ['has', 'point_count'],
         paint: {
-            'circle-color': 'rgba(255, 255, 255, 0.7)', // Pale white color
+            'circle-color': 'rgba(165, 180, 252, 0.8)', // Light indigo/lavender color that's thematic but different from station points
             'circle-radius': [
                 'step',
                 ['get', 'point_count'],
@@ -136,7 +134,7 @@ export const addStationLayers = (map: mapboxgl.Map, stations: Station[]) => {
             ],
             'circle-stroke-width': 2,
             'circle-stroke-color': '#fff',
-            'circle-stroke-opacity': 0.5,
+            'circle-stroke-opacity': 0.7, // Increased to match unclustered points
         },
     })
 
@@ -152,7 +150,7 @@ export const addStationLayers = (map: mapboxgl.Map, stations: Station[]) => {
             'text-size': 12,
         },
         paint: {
-            'text-color': '#333333', // Dark gray text for better visibility on pale white
+            'text-color': '#000000', // Changed from #333333 (dark gray) to black for better visibility
         },
     })
 
@@ -164,11 +162,11 @@ export const addStationLayers = (map: mapboxgl.Map, stations: Station[]) => {
         filter: ['!', ['has', 'point_count']],
         paint: {
             'circle-radius': 6,
-            'circle-color': '#fff',
+            'circle-color': '#6366f1', // Changed from '#fff' to indigo color to match topic-stations
             'circle-opacity': 0.8,
             'circle-stroke-width': 2,
-            'circle-stroke-color': '#fff',
-            'circle-stroke-opacity': 0.3,
+            'circle-stroke-color': '#eeeeee', // Keep white border
+            'circle-stroke-opacity': 0.5, // Increased from 0.3 to make the white border more visible
         },
     })
 
