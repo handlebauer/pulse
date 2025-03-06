@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TrendingTopics } from '../topics/TrendingTopics'
@@ -10,18 +10,32 @@ import { MapControls } from './MapControls'
 interface MapLayerControlsProps {
     onTopicClick: (topicId: string) => void
     selectedTopicId: string | null
+    onTrendingTopicsVisibilityChange?: (isVisible: boolean) => void
 }
 
 export function MapLayerControls({
     onTopicClick,
     selectedTopicId,
+    onTrendingTopicsVisibilityChange,
 }: MapLayerControlsProps) {
     const [showTrendingTopics, setShowTrendingTopics] = useState(false)
     const [isTopicsEmpty, setIsTopicsEmpty] = useState(false)
     const [hasError, setHasError] = useState(false)
 
+    // Notify parent of initial visibility state
+    useEffect(() => {
+        if (onTrendingTopicsVisibilityChange) {
+            onTrendingTopicsVisibilityChange(showTrendingTopics)
+        }
+    }, [onTrendingTopicsVisibilityChange, showTrendingTopics])
+
     const toggleTrendingTopics = () => {
-        setShowTrendingTopics((prev) => !prev)
+        const newState = !showTrendingTopics
+        setShowTrendingTopics(newState)
+        // Notify parent component about visibility change
+        if (onTrendingTopicsVisibilityChange) {
+            onTrendingTopicsVisibilityChange(newState)
+        }
     }
 
     const handleEmptyStateChange = (isEmpty: boolean, error?: boolean) => {

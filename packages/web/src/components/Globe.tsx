@@ -38,6 +38,8 @@ export function Globe({ stations }: GlobeProps) {
     const { topics: visibleTopics } = useTrendingTopics(10)
     const { currentlyPlayingStation } = useAudioPlayerContext()
     const [topicStations, setTopicStations] = useState<string[]>([])
+    const [isTrendingTopicsPanelVisible, setIsTrendingTopicsPanelVisible] =
+        useState(false)
 
     useEffect(() => {
         if (!mapContainer.current) return
@@ -274,6 +276,7 @@ export function Globe({ stations }: GlobeProps) {
                 }
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTopicId, visibleTopics, stations])
 
     // Function to animate the pulsing effect
@@ -330,9 +333,19 @@ export function Globe({ stations }: GlobeProps) {
         })
 
         if (hasPoints) {
-            // Add some padding and animate the transition
+            // Add asymmetric padding with more padding on the right side
+            // to account for the TrendingTopics panel if it's visible
+            const trendingTopicsPanelWidth = isTrendingTopicsPanelVisible
+                ? 320
+                : 0 // Estimated panel width
+
             map.fitBounds(bounds, {
-                padding: { top: 100, bottom: 100, left: 100, right: 100 },
+                padding: {
+                    top: 100,
+                    bottom: 100,
+                    left: 100,
+                    right: 100 + trendingTopicsPanelWidth, // Add extra padding for the panel when visible
+                },
                 duration: 1000,
             })
         }
@@ -340,6 +353,10 @@ export function Globe({ stations }: GlobeProps) {
 
     const handleTopicClick = (topicId: string) => {
         setSelectedTopicId((prevId) => (prevId === topicId ? null : topicId))
+    }
+
+    const handleTrendingTopicsVisibilityChange = (isVisible: boolean) => {
+        setIsTrendingTopicsPanelVisible(isVisible)
     }
 
     return (
@@ -360,6 +377,9 @@ export function Globe({ stations }: GlobeProps) {
             <MapLayerControls
                 onTopicClick={handleTopicClick}
                 selectedTopicId={selectedTopicId}
+                onTrendingTopicsVisibilityChange={
+                    handleTrendingTopicsVisibilityChange
+                }
             />
 
             {/* Subtitle-style transcription */}
