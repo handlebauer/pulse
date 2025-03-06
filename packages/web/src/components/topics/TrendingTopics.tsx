@@ -38,10 +38,6 @@ export function TrendingTopics({
     const [visibleTopics, setVisibleTopics] = useState<Topic[]>([])
     const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null)
 
-    useEffect(() => {
-        console.log('got here')
-    }, [])
-
     // Update empty state
     useEffect(() => {
         if (onEmptyStateChange && !isLoading) {
