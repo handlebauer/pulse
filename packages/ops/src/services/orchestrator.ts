@@ -22,8 +22,15 @@ const orchestrator = createOrchestrator({
         serviceRoleKey: defaultConfig.database.serviceRoleKey,
     },
     transcription: {
-        googleApiKey: defaultConfig.transcription.googleApiKey,
-        model: defaultConfig.transcription.model,
+        provider: 'google',
+        google: {
+            apiKey: defaultConfig.transcription.google.apiKey,
+            model: defaultConfig.transcription.google.model,
+        },
+        openai: {
+            apiKey: defaultConfig.transcription.openai.apiKey,
+            model: defaultConfig.transcription.openai.model,
+        },
     },
 })
 
