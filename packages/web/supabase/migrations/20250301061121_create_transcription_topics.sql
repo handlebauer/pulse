@@ -124,7 +124,7 @@ BEGIN
             -- Limit to last ~10 words
             v_context_before := regexp_replace(
                 v_context_before, 
-                '^.*((?:\s+\S+){0,10})$', 
+                '^.*((?:\S+\s+){0,9}\S+)$', 
                 '\1'
             );
             
