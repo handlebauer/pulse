@@ -290,6 +290,63 @@ export type Database = {
                 }
                 Relationships: []
             }
+            transcription_topics: {
+                Row: {
+                    confidence: number
+                    contextAfter: string | null
+                    contextBefore: string | null
+                    created_at: string
+                    id: string
+                    matchText: string
+                    position: number | null
+                    segmentIndex: number | null
+                    topicId: string
+                    transcriptionId: string
+                    updated_at: string
+                }
+                Insert: {
+                    confidence?: number
+                    contextAfter?: string | null
+                    contextBefore?: string | null
+                    created_at?: string
+                    id?: string
+                    matchText: string
+                    position?: number | null
+                    segmentIndex?: number | null
+                    topicId: string
+                    transcriptionId: string
+                    updated_at?: string
+                }
+                Update: {
+                    confidence?: number
+                    contextAfter?: string | null
+                    contextBefore?: string | null
+                    created_at?: string
+                    id?: string
+                    matchText?: string
+                    position?: number | null
+                    segmentIndex?: number | null
+                    topicId?: string
+                    transcriptionId?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: 'transcription_topics_topicId_fkey'
+                        columns: ['topicId']
+                        isOneToOne: false
+                        referencedRelation: 'topics'
+                        referencedColumns: ['id']
+                    },
+                    {
+                        foreignKeyName: 'transcription_topics_transcriptionId_fkey'
+                        columns: ['transcriptionId']
+                        isOneToOne: false
+                        referencedRelation: 'transcriptions'
+                        referencedColumns: ['id']
+                    },
+                ]
+            }
             transcriptions: {
                 Row: {
                     audioData: string
@@ -771,6 +828,15 @@ export type Database = {
                     geom2: unknown
                 }
                 Returns: boolean
+            }
+            find_topic_mentions: {
+                Args: {
+                    p_transcription_id: string
+                    p_topic_id: string
+                    p_topic_name: string
+                    p_normalized_topic_name: string
+                }
+                Returns: undefined
             }
             geography:
                 | {

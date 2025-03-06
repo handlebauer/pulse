@@ -236,8 +236,13 @@ export class TopicExtractor extends CoreTopicExtractor {
      *
      * @param stationId - The ID of the station that mentioned the topics
      * @param topics - Array of topics extracted from the transcription
+     * @param transcriptionId - The ID of the transcription where topics were found
      */
-    async saveTopics(stationId: string, topics: Topic[]): Promise<void> {
+    async saveTopics(
+        stationId: string,
+        topics: Topic[],
+        transcriptionId?: string,
+    ): Promise<void> {
         const now = new Date().toISOString()
 
         for (const topic of topics) {
@@ -279,6 +284,26 @@ export class TopicExtractor extends CoreTopicExtractor {
                         stTopicError,
                     )
                 }
+
+                // 3. Find and save topic mentions in the transcription
+                if (transcriptionId) {
+                    const { error: findMentionError } = await this.dbClient.rpc(
+                        'find_topic_mentions',
+                        {
+                            p_transcription_id: transcriptionId,
+                            p_topic_id: topicId,
+                            p_topic_name: topic.name,
+                            p_normalized_topic_name: topic.normalizedName,
+                        },
+                    )
+
+                    if (findMentionError) {
+                        console.error(
+                            'Error finding topic mentions:',
+                            findMentionError,
+                        )
+                    }
+                }
             } catch (error) {
                 console.error(`Error processing topic "${topic.name}":`, error)
             }
@@ -306,8 +331,12 @@ export class TopicExtractor extends CoreTopicExtractor {
                 return 0
             }
 
-            // Save topics to database with station relationships
-            await this.saveTopics(transcription.stationId, topics)
+            // Save topics to database with station relationships and transcription links
+            await this.saveTopics(
+                transcription.stationId,
+                topics,
+                transcription.id,
+            )
 
             return topics.length
         } catch (error) {
