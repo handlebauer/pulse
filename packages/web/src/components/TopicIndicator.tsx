@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { PlayCircle, PauseCircle } from 'lucide-react'
 import { useTopicMentions, TopicSoundbite } from '@/hooks/useTopicMentions'
@@ -28,6 +28,7 @@ export function TopicIndicator({
     const [audioElements, setAudioElements] = useState<{
         [key: string]: HTMLAudioElement
     }>({})
+    const audioElementsRef = useRef<{ [key: string]: HTMLAudioElement }>({})
 
     // Update soundbites when they come from the hook
     useEffect(() => {
@@ -40,7 +41,7 @@ export function TopicIndicator({
 
         soundbites.forEach((soundbite) => {
             // Only create new audio elements if we don't have them yet
-            if (!audioElements[soundbite.id]) {
+            if (!audioElementsRef.current[soundbite.id]) {
                 const audio = new Audio(
                     `data:audio/mp3;base64,${soundbite.audioData}`,
                 )
@@ -57,20 +58,21 @@ export function TopicIndicator({
 
                 elements[soundbite.id] = audio
             } else {
-                elements[soundbite.id] = audioElements[soundbite.id]
+                elements[soundbite.id] = audioElementsRef.current[soundbite.id]
             }
         })
 
+        audioElementsRef.current = elements
         setAudioElements(elements)
 
         // Cleanup audio elements on unmount
         return () => {
-            Object.values(audioElements).forEach((audio) => {
+            Object.values(elements).forEach((audio) => {
                 audio.pause()
                 audio.src = ''
             })
         }
-    }, [soundbites, audioElements])
+    }, [soundbites])
 
     const togglePlay = (soundbiteId: string) => {
         // Stop all currently playing audio
