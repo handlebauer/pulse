@@ -18,11 +18,29 @@ import { useTranscriptions } from '@/hooks/useTranscriptions'
 import { SubtitleTranscription } from './SubtitleTranscription'
 import { StationTopics } from './topics/StationTopics'
 import { useTrendingTopics } from '@/hooks/useTrendingTopics'
+import { useStationTopics } from '@/hooks/useStationTopics'
 import { cn } from '@/lib/utils'
 import { useAudioPlayerContext } from '@/contexts/AudioPlayerContext'
 import { MapLayerControls } from './map/MapLayerControls'
 import { MapControls } from './map/MapControls'
 import { TopicIndicator } from './TopicIndicator'
+
+// Define interfaces for different topic types
+interface BaseTopic {
+    id: string
+    name: string
+    normalizedName: string
+    trendScore: number | null
+}
+
+interface TrendingTopic extends BaseTopic {
+    stationCount: number
+    recentStations: {
+        stationId: string
+        stationName: string
+        relevanceScore: number
+    }[]
+}
 
 interface GlobeProps {
     stations: Station[]
@@ -35,11 +53,50 @@ export function Globe({ stations }: GlobeProps) {
     const { transcriptionMap, isLoading } = useTranscriptions()
     const [showTranscription, setShowTranscription] = useState(false)
     const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
-    const { topics: visibleTopics } = useTrendingTopics(10)
+    const { topics: trendingTopics } = useTrendingTopics(10)
+    const { topics: stationTopics } = useStationTopics(
+        selectedStation?.id || null,
+    )
     const { currentlyPlayingStation } = useAudioPlayerContext()
     const [topicStations, setTopicStations] = useState<string[]>([])
     const [isTrendingTopicsPanelVisible, setIsTrendingTopicsPanelVisible] =
         useState(false)
+
+    // Create a unified representation of all visible topics for use in TopicIndicator
+    const [visibleTopics, setVisibleTopics] = useState<
+        Array<BaseTopic | TrendingTopic>
+    >([])
+
+    // Update visibleTopics when either trendingTopics or stationTopics change
+    useEffect(() => {
+        const allTopics = [...trendingTopics]
+
+        // Add station topics that aren't already in trending topics
+        stationTopics.forEach((stationTopic) => {
+            if (!allTopics.some((topic) => topic.id === stationTopic.id)) {
+                allTopics.push({
+                    id: stationTopic.id,
+                    name: stationTopic.name,
+                    normalizedName: stationTopic.normalizedName,
+                    trendScore: stationTopic.trendScore,
+                    stationCount: 1,
+                    recentStations: selectedStation
+                        ? [
+                              {
+                                  stationId: selectedStation.id,
+                                  stationName:
+                                      selectedStation.stationName ||
+                                      'Unknown Station',
+                                  relevanceScore: stationTopic.relevanceScore,
+                              },
+                          ]
+                        : [],
+                })
+            }
+        })
+
+        setVisibleTopics(allTopics)
+    }, [trendingTopics, stationTopics, selectedStation])
 
     useEffect(() => {
         if (!mapContainer.current) return
@@ -187,17 +244,28 @@ export function Globe({ stations }: GlobeProps) {
             // Get stations for the selected topic
             if (selectedTopicId) {
                 const selectedTopic = visibleTopics.find(
-                    (t: {
-                        id: string
-                        name: string
-                        recentStations?: Array<{ stationId: string }>
-                    }) => t.id === selectedTopicId,
-                )
-                if (selectedTopic && selectedTopic.recentStations) {
+                    (t) => t.id === selectedTopicId,
+                ) as BaseTopic | TrendingTopic
+
+                if (selectedTopic) {
                     // Get station IDs for this topic
-                    const stationIds = selectedTopic.recentStations.map(
-                        (s: { stationId: string }) => s.stationId,
-                    )
+                    let stationIds: string[] = []
+
+                    // Check if this topic has the recentStations property (i.e., it's a TrendingTopic)
+                    if (
+                        'recentStations' in selectedTopic &&
+                        selectedTopic.recentStations.length > 0
+                    ) {
+                        // It's a trending topic
+                        stationIds = selectedTopic.recentStations.map(
+                            (s) => s.stationId,
+                        )
+                    }
+                    // If it's only in station topics, use the selected station
+                    else if (selectedStation) {
+                        stationIds = [selectedStation.id]
+                    }
+
                     setTopicStations(stationIds)
 
                     // Update filters to show only stations discussing this topic
@@ -404,6 +472,8 @@ export function Globe({ stations }: GlobeProps) {
                         stationId={selectedStation.id}
                         stationName={selectedStation.stationName}
                         className="shadow-xl w-full max-w-xs"
+                        onTopicClick={handleTopicClick}
+                        selectedTopicId={selectedTopicId}
                     />
                 </MapControls>
             )}

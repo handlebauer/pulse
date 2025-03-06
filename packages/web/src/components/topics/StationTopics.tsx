@@ -9,6 +9,8 @@ interface StationTopicsProps {
     stationName?: string
     className?: string
     maxTopics?: number
+    onTopicClick?: (topicId: string) => void
+    selectedTopicId?: string | null
 }
 
 export function StationTopics({
@@ -16,6 +18,8 @@ export function StationTopics({
     stationName,
     className,
     maxTopics = 5,
+    onTopicClick,
+    selectedTopicId,
 }: StationTopicsProps) {
     const { topics, isLoading, error } = useStationTopics(stationId)
     const [visibleTopics, setVisibleTopics] = useState<StationTopicData[]>([])
@@ -31,6 +35,13 @@ export function StationTopics({
             setVisibleTopics(topics.slice(0, maxTopics))
         }
     }, [topics, maxTopics, isLoading])
+
+    const handleTopicClick = (e: React.MouseEvent, topicId: string) => {
+        e.preventDefault()
+        if (onTopicClick) {
+            onTopicClick(topicId)
+        }
+    }
 
     if (isLoading || !visibleTopics.length) {
         return (
@@ -94,7 +105,11 @@ export function StationTopics({
                                     ? 'bg-black/40 border-indigo-500/40 text-indigo-400'
                                     : 'bg-black/30 text-gray-300 border-gray-700/50',
                                 'shadow-sm hover:shadow',
+                                selectedTopicId === topic.id &&
+                                    'border-indigo-500/70 text-indigo-300',
+                                'cursor-pointer',
                             )}
+                            onClick={(e) => handleTopicClick(e, topic.id)}
                         >
                             {topic.name}
                             {topic.isTrending && (
