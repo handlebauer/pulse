@@ -18,6 +18,7 @@ export interface TextInput {
     stationName?: string
     segment?: {
         isCommercial?: boolean
+        isMusic?: boolean
     }
 }
 
@@ -58,8 +59,8 @@ export class CoreTopicExtractor {
             return []
         }
 
-        // Skip commercial segments if specified
-        if (input.segment?.isCommercial) {
+        // Skip commercial or music segments if specified
+        if (input.segment?.isCommercial || input.segment?.isMusic) {
             return []
         }
 
@@ -216,11 +217,11 @@ export class TopicExtractor extends CoreTopicExtractor {
             }
         }
 
-        // Concatenate all transcription segments, filtering out commercials
+        // Concatenate all transcription segments, filtering out commercials and music
         const segments =
             transcription.transcription as unknown as TranscriptionResult[]
         const fullText = segments
-            .filter((segment) => !segment.isCommercial)
+            .filter((segment) => !segment.isCommercial && !segment.isMusic)
             .map((segment) => segment.caption)
             .join(' ')
 

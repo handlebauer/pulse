@@ -96,9 +96,10 @@ BEGIN
         -- Get the caption text
         v_segment_text := v_segment->>'caption';
         
-        -- Skip if no caption or it's marked as commercial
+        -- Skip if no caption or it's marked as commercial or music
         IF v_segment_text IS NULL OR 
-           (v_segment->>'isCommercial')::boolean = true THEN
+           (v_segment->>'isCommercial')::boolean = true OR
+           (v_segment->>'isMusic')::boolean = true THEN
             CONTINUE;
         END IF;
         
