@@ -17,12 +17,12 @@ import { removePopup } from './map/popupManager'
 import { useTranscriptions } from '@/hooks/useTranscriptions'
 import { SubtitleTranscription } from './SubtitleTranscription'
 import { StationTopics } from './topics/StationTopics'
-import { Button } from '@/components/ui/button'
 import { useTrendingTopics } from '@/hooks/useTrendingTopics'
 import { cn } from '@/lib/utils'
 import { useAudioPlayerContext } from '@/contexts/AudioPlayerContext'
 import { MapLayerControls } from './map/MapLayerControls'
 import { MapControls } from './map/MapControls'
+import { TopicIndicator } from './TopicIndicator'
 
 interface GlobeProps {
     stations: Station[]
@@ -185,12 +185,16 @@ export function Globe({ stations }: GlobeProps) {
             // Get stations for the selected topic
             if (selectedTopicId) {
                 const selectedTopic = visibleTopics.find(
-                    (t) => t.id === selectedTopicId,
+                    (t: {
+                        id: string
+                        name: string
+                        recentStations?: Array<{ stationId: string }>
+                    }) => t.id === selectedTopicId,
                 )
                 if (selectedTopic && selectedTopic.recentStations) {
                     // Get station IDs for this topic
                     const stationIds = selectedTopic.recentStations.map(
-                        (s) => s.stationId,
+                        (s: { stationId: string }) => s.stationId,
                     )
                     setTopicStations(stationIds)
 
@@ -338,54 +342,19 @@ export function Globe({ stations }: GlobeProps) {
         setSelectedTopicId((prevId) => (prevId === topicId ? null : topicId))
     }
 
-    // Add a topic indicator when a topic is selected
-    const TopicIndicator = () => {
-        if (!selectedTopicId) return null
-
-        // Find the topic name
-        const selectedTopic = visibleTopics.find(
-            (t: { id: string; name: string }) => t.id === selectedTopicId,
-        )
-
-        if (!selectedTopic) return null
-
-        // Get number of stations discussing this topic
-        const stationCount = topicStations.length
-
-        return (
-            <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-20 animate-in fade-in zoom-in-90 duration-300">
-                <div
-                    className="bg-black/50 text-gray-200 
-                             px-4 py-2 rounded-full shadow-lg border border-gray-700/50 
-                             flex items-center space-x-2 backdrop-blur-md"
-                >
-                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse mr-1.5" />
-                    <span className="text-sm">
-                        Viewing {stationCount}{' '}
-                        {stationCount === 1 ? 'station' : 'stations'} discussing{' '}
-                        <span className="font-medium text-indigo-400">
-                            {selectedTopic.name}
-                        </span>
-                    </span>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-1.5 h-5 w-5 p-0 rounded-full text-gray-200 hover:bg-gray-700/50 flex items-center justify-center"
-                        onClick={() => setSelectedTopicId(null)}
-                    >
-                        <span className="text-xs">✕</span>
-                    </Button>
-                </div>
-            </div>
-        )
-    }
-
     return (
         <div className="absolute inset-0 overflow-hidden">
             <div ref={mapContainer} className="w-full h-screen fixed inset-0" />
 
-            {/* Topic indicator - shows when a topic is selected (now at top) */}
-            <TopicIndicator />
+            {/* Use the extracted TopicIndicator component */}
+            {selectedTopicId && (
+                <TopicIndicator
+                    selectedTopicId={selectedTopicId}
+                    visibleTopics={visibleTopics}
+                    topicStations={topicStations}
+                    setSelectedTopicId={setSelectedTopicId}
+                />
+            )}
 
             {/* Map Layer Controls */}
             <MapLayerControls
