@@ -22,84 +22,175 @@ export function TopicIndicator({
     topicStations,
     setSelectedTopicId,
 }: TopicIndicatorProps) {
+    console.log('TopicIndicator rendered')
+
     const { soundbites: initialSoundbites, loading } =
         useTopicMentions(selectedTopicId)
     const [soundbites, setSoundbites] = useState<TopicSoundbite[]>([])
-    const [audioElements, setAudioElements] = useState<{
-        [key: string]: HTMLAudioElement
-    }>({})
-    const audioElementsRef = useRef<{ [key: string]: HTMLAudioElement }>({})
+    // Single audio element approach - much simpler to manage
+    const audioRef = useRef<HTMLAudioElement | null>(null)
+    const currentlyPlayingRef = useRef<string | null>(null)
 
     // Update soundbites when they come from the hook
     useEffect(() => {
         setSoundbites(initialSoundbites)
+        // Stop any playing audio when soundbites change
+        if (audioRef.current) {
+            audioRef.current.pause()
+            currentlyPlayingRef.current = null
+        }
     }, [initialSoundbites])
 
-    // Create or get audio elements for each soundbite
+    // Create the audio element once
     useEffect(() => {
-        const elements: { [key: string]: HTMLAudioElement } = {}
+        // Create a single audio element that we'll reuse
+        const audio = new Audio()
 
-        soundbites.forEach((soundbite) => {
-            // Only create new audio elements if we don't have them yet
-            if (!audioElementsRef.current[soundbite.id]) {
-                const audio = new Audio(
-                    `data:audio/mp3;base64,${soundbite.audioData}`,
-                )
-
-                audio.addEventListener('ended', () => {
-                    setSoundbites((prev) =>
-                        prev.map((sb) =>
-                            sb.id === soundbite.id
-                                ? { ...sb, isPlaying: false }
-                                : sb,
-                        ),
-                    )
-                })
-
-                elements[soundbite.id] = audio
-            } else {
-                elements[soundbite.id] = audioElementsRef.current[soundbite.id]
-            }
+        // Add event listeners
+        audio.addEventListener('ended', () => {
+            // Reset playing state when audio ends
+            setSoundbites((prev) =>
+                prev.map((sb) =>
+                    sb.id === currentlyPlayingRef.current
+                        ? { ...sb, isPlaying: false }
+                        : sb,
+                ),
+            )
+            currentlyPlayingRef.current = null
         })
 
-        audioElementsRef.current = elements
-        setAudioElements(elements)
+        audio.addEventListener('error', (e) => {
+            console.error('Audio error:', e)
+            // Reset playing state
+            setSoundbites((prev) =>
+                prev.map((sb) =>
+                    sb.id === currentlyPlayingRef.current
+                        ? { ...sb, isPlaying: false }
+                        : sb,
+                ),
+            )
+            currentlyPlayingRef.current = null
+        })
 
-        // Cleanup audio elements on unmount
+        audioRef.current = audio
+
+        // Cleanup on unmount
         return () => {
-            Object.values(elements).forEach((audio) => {
+            if (audio) {
                 audio.pause()
                 audio.src = ''
-            })
+                audio.remove()
+            }
+            audioRef.current = null
         }
-    }, [soundbites])
+    }, [])
 
     const togglePlay = (soundbiteId: string) => {
-        // Stop all currently playing audio
-        soundbites.forEach((soundbite) => {
-            if (soundbite.isPlaying && soundbite.id !== soundbiteId) {
-                audioElements[soundbite.id]?.pause()
-            }
-        })
+        const soundbite = soundbites.find((sb) => sb.id === soundbiteId)
+        if (!soundbite) {
+            console.error('Soundbite not found:', soundbiteId)
+            return
+        }
 
-        // Toggle play state for the clicked soundbite
+        const audio = audioRef.current
+        if (!audio) {
+            console.error('Audio element not available')
+            return
+        }
+
+        // Are we playing this soundbite, or pausing it?
+        const isCurrentlyPlaying = currentlyPlayingRef.current === soundbiteId
+        const willPlay = !isCurrentlyPlaying
+
+        // Update UI immediately
         setSoundbites((prev) =>
-            prev.map((soundbite) => {
-                if (soundbite.id === soundbiteId) {
-                    const isCurrentlyPlaying = !soundbite.isPlaying
+            prev.map((sb) => ({
+                ...sb,
+                isPlaying: sb.id === soundbiteId ? willPlay : false,
+            })),
+        )
 
-                    if (isCurrentlyPlaying) {
-                        audioElements[soundbiteId]?.play()
-                    } else {
-                        audioElements[soundbiteId]?.pause()
+        // Handle audio
+        try {
+            // Always pause current audio first
+            audio.pause()
+
+            if (willPlay) {
+                // We're going to play this soundbite
+                // Set the source if it's a new soundbite
+                if (currentlyPlayingRef.current !== soundbiteId) {
+                    // Prepare the source
+                    const audioSrc = soundbite.audioData.startsWith('data:')
+                        ? soundbite.audioData
+                        : `data:audio/mp3;base64,${soundbite.audioData}`
+
+                    // Set the source
+                    audio.src = audioSrc
+
+                    // Wait for audio to be ready, then play
+                    audio.oncanplaythrough = () => {
+                        console.log('Audio ready to play')
+                        try {
+                            const playPromise = audio.play()
+                            if (playPromise) {
+                                playPromise.catch((err) => {
+                                    console.error('Play failed:', err)
+                                    // Only update UI for non-abort errors
+                                    if (err.name !== 'AbortError') {
+                                        setSoundbites((prev) =>
+                                            prev.map((sb) => ({
+                                                ...sb,
+                                                isPlaying: false,
+                                            })),
+                                        )
+                                        currentlyPlayingRef.current = null
+                                    }
+                                })
+                            }
+                        } catch (err) {
+                            console.error('Error playing audio:', err)
+                            setSoundbites((prev) =>
+                                prev.map((sb) => ({
+                                    ...sb,
+                                    isPlaying: false,
+                                })),
+                            )
+                            currentlyPlayingRef.current = null
+                        }
                     }
 
-                    return { ...soundbite, isPlaying: isCurrentlyPlaying }
+                    // Set this as the currently playing soundbite
+                    currentlyPlayingRef.current = soundbiteId
                 } else {
-                    return { ...soundbite, isPlaying: false }
+                    // Resume playing the current soundbite
+                    try {
+                        audio.play()
+                        currentlyPlayingRef.current = soundbiteId
+                    } catch (err) {
+                        console.error('Error resuming audio:', err)
+                        setSoundbites((prev) =>
+                            prev.map((sb) => ({
+                                ...sb,
+                                isPlaying: false,
+                            })),
+                        )
+                        currentlyPlayingRef.current = null
+                    }
                 }
-            }),
-        )
+            } else {
+                // We're pausing the current soundbite
+                currentlyPlayingRef.current = null
+            }
+        } catch (err) {
+            console.error('Error in togglePlay:', err)
+            setSoundbites((prev) =>
+                prev.map((sb) => ({
+                    ...sb,
+                    isPlaying: false,
+                })),
+            )
+            currentlyPlayingRef.current = null
+        }
     }
 
     if (!selectedTopicId) return null
@@ -140,10 +231,6 @@ export function TopicIndicator({
             {/* Soundbites Section */}
             {soundbites.length > 0 && (
                 <div className="mt-2 bg-black/50 backdrop-blur-md p-3 rounded-lg border border-gray-700/50 w-96 max-w-full">
-                    <h3 className="text-sm font-medium text-indigo-300 mb-2">
-                        Listen to Soundbites
-                    </h3>
-
                     <div className="space-y-3">
                         {soundbites.map((soundbite) => (
                             <div
