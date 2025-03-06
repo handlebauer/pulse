@@ -15,7 +15,7 @@
 
 import fs from 'node:fs/promises'
 import dedent from 'dedent'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { OpenAI } from 'openai'
 import { type RadioStation, RadioStationCategory } from '@/lib/radio/types'
 import { resolveFromRoot } from '@/utils/general'
 
@@ -31,13 +31,15 @@ const IS_SAMPLE = process.env.SAMPLE === 'true'
 const INPUT_FILE = resolveFromRoot('assets/radio-stations.json')
 const OUTPUT_FILE = resolveFromRoot('assets/radio-stations-classified.json')
 
-// Initialize the Gemini model
+// Initialize the OpenAI client for Gemini model
 const googleApiKey = process.env.CLASSIFY_GOOGLE_API_KEY
 if (!googleApiKey) {
     throw new Error('CLASSIFY_GOOGLE_API_KEY environment variable is required')
 }
-const googleAI = new GoogleGenerativeAI(googleApiKey)
-const model = googleAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+const client = new OpenAI({
+    apiKey: googleApiKey,
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
+})
 
 /**
  * Load stations data from JSON file
@@ -128,8 +130,11 @@ export async function classifyStationsBatch(
 
     try {
         console.log(`Classifying batch of ${stations.length} stations...`)
-        const result = await model.generateContent(prompt)
-        const text = result.response.text()
+        const response = await client.chat.completions.create({
+            model: 'gemini-2.0-flash-lite',
+            messages: [{ role: 'user', content: prompt }],
+        })
+        const text = response.choices[0]?.message?.content || ''
 
         // Extract JSON from the response
         const jsonMatch = text.match(/\[\s*\{.*\}\s*\]/s)

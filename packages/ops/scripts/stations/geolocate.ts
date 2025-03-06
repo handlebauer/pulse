@@ -12,7 +12,9 @@
  */
 import ora from 'ora'
 import * as cheerio from 'cheerio'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { OpenAI } from 'openai'
+import { zodResponseFormat } from 'openai/helpers/zod'
+import { z } from 'zod'
 import createLogger from '@/lib/logger'
 import { readFilteredStations, writeFilteredStations } from '@/lib/db'
 import { defaultConfig } from '@/config'
@@ -37,6 +39,13 @@ interface RadioStation {
     geolocatedBy?: string
     [key: string]: any // Allow for additional properties
 }
+
+// Define a Zod schema for the location response
+const LocationSchema = z.object({
+    city: z.string(),
+    state: z.string(),
+    country: z.string(),
+})
 
 /**
  * Scrape a website for content that might contain location information
@@ -116,12 +125,9 @@ async function extractLocationWithLLM(
     websiteContent: string,
 ): Promise<string | null> {
     try {
-        const genAI = new GoogleGenerativeAI(
-            defaultConfig.transcription.google.apiKey,
-        )
-        const model = genAI.getGenerativeModel({
-            model: defaultConfig.transcription.google.model,
-            generationConfig: { responseMimeType: 'application/json' },
+        const client = new OpenAI({
+            apiKey: defaultConfig.transcription.google.apiKey,
+            baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
         })
 
         const prompt = dedent`
@@ -133,6 +139,7 @@ async function extractLocationWithLLM(
             ${websiteContent.substring(0, 5000)}
             
             Based on BOTH properties (the station name and the website content), what is the most likely city and state/province/region where this station is located?
+
             If you can determine the location, respond ONLY with the location in the format:
             
             {
@@ -147,25 +154,31 @@ async function extractLocationWithLLM(
         logger.debug(
             `Sending ${websiteContent.length} chars to LLM for location extraction`,
         )
-        const result = await model.generateContent(prompt)
-        const response = result.response.text().trim()
+        const response = await client.beta.chat.completions.parse({
+            model: defaultConfig.transcription.google.model,
+            messages: [
+                {
+                    role: 'system',
+                    content:
+                        'You extract location information from text about radio stations.',
+                },
+                { role: 'user', content: prompt },
+            ],
+            response_format: zodResponseFormat(LocationSchema, 'location'),
+        })
 
-        // Parse the JSON response
-        let locationData: { city: string; state: string; country: string }
-        try {
-            locationData = JSON.parse(response)
-        } catch (parseError) {
-            logger.error(
-                `Failed to parse LLM response as JSON: ${response}`,
-                parseError,
-            )
+        const locationData = response.choices[0]?.message?.parsed
+
+        // Check if location data was successfully parsed
+        if (!locationData) {
+            logger.debug(`Failed to parse location data for ${stationName}`)
             return null
         }
 
         // Check if any valid location data was found
         if (
-            locationData.city === 'UNKNOWN' &&
             locationData.state === 'UNKNOWN' &&
+            locationData.city === 'UNKNOWN' &&
             locationData.country === 'UNKNOWN'
         ) {
             logger.debug(`LLM could not determine location for ${stationName}`)
@@ -247,24 +260,23 @@ async function extractLocationFromMetadata(
     station: RadioStation,
 ): Promise<string | null> {
     try {
-        const genAI = new GoogleGenerativeAI(
-            defaultConfig.transcription.google.apiKey,
-        )
-        const model = genAI.getGenerativeModel({
-            model: defaultConfig.transcription.google.model,
-            generationConfig: { responseMimeType: 'application/json' },
+        const client = new OpenAI({
+            apiKey: defaultConfig.transcription.google.apiKey,
+            baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
         })
 
+        // Create a prompt with all available metadata
         const prompt = dedent`
-            I need to determine the location (city and state/province/region) of a radio station based on its metadata.
+            I need to determine the location (city and state/province/region) of this radio station based on its metadata:
             
             Station Name: ${station.stationName}
-            Website URL: ${station.websiteUrl}
-            Country: ${station.country}
-            Country Code: ${station.countryCode}
+            Website URL: ${station.websiteUrl || 'None'}
+            Country: ${station.country || 'Unknown'}
+            Country Code: ${station.countryCode || 'Unknown'}
             State: ${station.state}
             
             Based on this metadata, what is the most likely city and state/province/region where this station is located?
+            
             If you can determine the location, respond ONLY with the location in the format:
             
             {
@@ -280,17 +292,25 @@ async function extractLocationFromMetadata(
         logger.debug(
             `Sending station metadata to LLM for location extraction: ${station.stationName}`,
         )
-        const result = await model.generateContent(prompt)
-        const response = result.response.text().trim()
+        const response = await client.beta.chat.completions.parse({
+            model: defaultConfig.transcription.google.model,
+            messages: [
+                {
+                    role: 'system',
+                    content:
+                        'You extract location information from radio station metadata.',
+                },
+                { role: 'user', content: prompt },
+            ],
+            response_format: zodResponseFormat(LocationSchema, 'location'),
+        })
 
-        // Parse the JSON response
-        let locationData: { city: string; state: string; country: string }
-        try {
-            locationData = JSON.parse(response)
-        } catch (parseError) {
-            logger.error(
-                `Failed to parse LLM response as JSON: ${response}`,
-                parseError,
+        const locationData = response.choices[0]?.message?.parsed
+
+        // Check if location data was successfully parsed
+        if (!locationData) {
+            logger.debug(
+                `Failed to parse location data for ${station.stationName} from metadata`,
             )
             return null
         }
@@ -303,7 +323,7 @@ async function extractLocationFromMetadata(
                 locationData.country === 'UNKNOWN')
         ) {
             logger.debug(
-                `LLM could not determine sufficient location from metadata for ${station.stationName} (state is required)`,
+                `LLM could not determine location for ${station.stationName} from metadata`,
             )
             return null
         }
@@ -317,24 +337,13 @@ async function extractLocationFromMetadata(
         if (locationData.country !== 'UNKNOWN')
             locationParts.push(locationData.country)
 
-        // If we have any valid location parts, return them as a comma-separated string
-        if (locationParts.length > 0) {
-            const locationString = locationParts.join(', ')
-            logger.debug(
-                `LLM extracted location from metadata for ${station.stationName}: "${locationString}"`,
-            )
-            return locationString
-        } else {
-            logger.debug(
-                `No valid location parts found from metadata for ${station.stationName}`,
-            )
-            return null
-        }
-    } catch (error) {
-        logger.error(
-            'Error using LLM to extract location from metadata:',
-            error,
+        const locationString = locationParts.join(', ')
+        logger.debug(
+            `LLM extracted location for ${station.stationName} from metadata: "${locationString}"`,
         )
+        return locationString
+    } catch (error) {
+        logger.error('Error extracting location from metadata:', error)
         return null
     }
 }

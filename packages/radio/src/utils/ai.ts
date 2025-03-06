@@ -17,24 +17,46 @@ export interface TopicExtractionAI {
 }
 
 /**
- * Google AI implementation for topic extraction
+ * Google AI implementation for topic extraction using OpenAI compatible client
  */
 class GoogleTopicExtractionAI implements TopicExtractionAI {
-    private client: GoogleGenerativeAI
+    private client: OpenAI
     private model: string
 
     constructor(apiKey: string, model: string) {
-        this.client = new GoogleGenerativeAI(apiKey)
+        this.client = new OpenAI({
+            apiKey: apiKey,
+            baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        })
         this.model = model
     }
 
     async generateContent(prompt: string): Promise<string> {
-        const model = this.client.getGenerativeModel({
+        const response = await this.client.beta.chat.completions.parse({
             model: this.model,
-            generationConfig: { responseMimeType: 'application/json' },
+            messages: [
+                {
+                    role: 'system',
+                    content:
+                        'You are a helpful assistant that extracts topics from radio transcriptions.',
+                },
+                { role: 'user', content: prompt },
+            ],
+            response_format: zodResponseFormat(
+                z.object({
+                    topics: z.array(
+                        z.object({
+                            name: z.string(),
+                            normalizedName: z.string(),
+                            relevanceScore: z.number(),
+                        }),
+                    ),
+                }),
+                'topics',
+            ),
         })
-        const result = await model.generateContent(prompt)
-        return result.response.text()
+
+        return response.choices[0]?.message?.content || ''
     }
 }
 

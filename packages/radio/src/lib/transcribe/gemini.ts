@@ -1,29 +1,24 @@
 import dedent from 'dedent'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { OpenAI } from 'openai'
+import { zodResponseFormat } from 'openai/helpers/zod'
+import { z } from 'zod'
 import { type TranscriptionResult } from '@/lib/stream/stream-manager'
 
 const DEFAULT_MODEL = 'gemini-2.0-flash'
 const DEFAULT_PROMPT = dedent`
     Please transcribe this radio stream, and classify whether each segment is a commercial advertisement or contains music.
-    Use the following format: 
-
-    {
-        timecode: 'hh:mm:ss',
-        caption: 'This is the caption for the first 4 seconds of the radio stream.',
-        isCommercial: boolean,
-        isMusic: boolean
-    }
-    
-    Guidelines for commercial classification:
-    - Segments that promote products, services, or businesses should be marked as commercial (true)
-    - Segments with jingles, slogans, or calls to action for purchases should be marked as commercial (true)
-    
-    Guidelines for music classification:
-    - Segments containing songs, instrumentals, or music performances should be marked as music (true)
-    - Segments with spoken content should be marked as music (true) only if the music is foreground
-    
-    Your final output should be an array of transcription objects.
+    Use the following format for each segment of the transcription.
 `
+
+// Define a schema for the transcription result
+const TranscriptionResultSchema = z.array(
+    z.object({
+        timecode: z.string(),
+        caption: z.string(),
+        isCommercial: z.boolean(),
+        isMusic: z.boolean(),
+    }),
+)
 
 /**
  * Creates a Google-based transcription service
@@ -40,13 +35,9 @@ export function createGoogleTranscriptionService(
         throw new Error('Google API key is required for transcription')
     }
 
-    const googleAI = new GoogleGenerativeAI(apiKey)
-
-    const aiModel = googleAI.getGenerativeModel({
-        model: model || DEFAULT_MODEL,
-        generationConfig: {
-            responseMimeType: 'application/json',
-        },
+    const client = new OpenAI({
+        apiKey: apiKey,
+        baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
     })
 
     /**
@@ -57,52 +48,60 @@ export function createGoogleTranscriptionService(
     async function transcribeAudio(
         audioFilePath: string,
     ): Promise<TranscriptionResult[]> {
-        // Generate content using a prompt and the metadata of the uploaded file.
-        const result = await aiModel.generateContent([
-            {
-                inlineData: {
-                    mimeType: 'audio/mp3',
-                    data: Buffer.from(
-                        await Bun.file(audioFilePath).arrayBuffer(),
-                    ).toString('base64'),
-                },
-            },
-            { text: DEFAULT_PROMPT },
-        ])
-
         try {
-            const text = result.response.text()
+            // Generate content using a prompt and the metadata of the uploaded file.
+            const audioFile = await Bun.file(audioFilePath).arrayBuffer()
+            const base64Audio = Buffer.from(audioFile).toString('base64')
 
-            let parsed = null
+            const response = await client.beta.chat.completions.parse({
+                model: model || DEFAULT_MODEL,
+                messages: [
+                    {
+                        role: 'system',
+                        content:
+                            'You are a helpful assistant that transcribes radio broadcasts accurately, providing structured results.',
+                    },
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'text',
+                                text: DEFAULT_PROMPT,
+                            },
+                            {
+                                type: 'input_audio',
+                                input_audio: {
+                                    data: base64Audio,
+                                    format: 'mp3',
+                                },
+                            },
+                        ],
+                    },
+                ],
+                response_format: zodResponseFormat(
+                    TranscriptionResultSchema,
+                    'transcription',
+                ),
+            })
 
-            try {
-                parsed = JSON.parse(text)
-            } catch {
-                // Gemini failed to correctly structure output
-                console.log(
-                    '[Google Transcription] Failed to parse result:',
-                    text,
+            const transcriptionResults = response.choices[0]?.message?.parsed
+
+            if (!transcriptionResults) {
+                console.error(
+                    '[Google Transcription] Failed to parse transcription result',
                 )
+                return []
             }
 
-            // Ensure the result matches our expected format
-            if (Array.isArray(parsed)) {
-                return parsed.map((item) => ({
-                    timecode: item.timecode || '00:00:00',
-                    caption: item.caption || '',
-                    isCommercial: item.isCommercial === true,
-                    isMusic: item.isMusic === true,
-                }))
-            }
-
-            console.error(
-                '[Google Transcription] Unexpected result format',
-                parsed,
-            )
-            return []
+            return transcriptionResults.map((item) => ({
+                timecode: item.timecode,
+                caption: item.caption,
+                isCommercial: item.isCommercial,
+                isMusic: item.isMusic,
+            }))
         } catch (error) {
             console.error(
-                '[Google Transcription] Error parsing transcription result:',
+                '[Google Transcription] Error processing transcription:',
                 error,
             )
             return []
